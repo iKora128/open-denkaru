@@ -17,7 +17,10 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 from sqlmodel import SQLModel
-from app.models.patient import Patient  # Import all models
+
+# Import all models to ensure they're registered with SQLModel
+from app.models.patient import Patient
+from app.models.prescription import Medication, PrescriptionItem, Prescription
 
 target_metadata = SQLModel.metadata
 

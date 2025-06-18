@@ -289,10 +289,92 @@ input, textarea, select {
 @media (max-width: 768px) {
   .glass-card {
     @apply p-4;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(8px) saturate(150%);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   }
   
   .card-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  /* Touch-friendly button sizes */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improved text input for mobile */
+  input, textarea, select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 12px;
+  }
+  
+  /* Mobile navigation */
+  .nav-link {
+    @apply px-4 py-3 text-base;
+  }
+  
+  /* Mobile typography */
+  h1 {
+    font-size: 2rem;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+  }
+  
+  h3 {
+    font-size: 1.25rem;
+  }
+  
+  /* Mobile patient card adjustments */
+  .patient-card {
+    @apply hover:scale-100 hover:translate-y-0;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(12px) saturate(165%);
+  }
+  
+  .card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  }
+  
+  /* Tablet navigation */
+  .nav-link {
+    @apply px-4 py-2.5;
+  }
+}
+
+/* Large tablet/small laptop */
+@media (min-width: 1025px) and (max-width: 1366px) {
+  .card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .glass-card {
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+}
+
+/* Landscape mobile orientation */
+@media (max-width: 768px) and (orientation: landscape) {
+  .glass-card {
+    @apply p-3;
+  }
+  
+  /* Adjust form layouts for landscape */
+  .form-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
 }
 
