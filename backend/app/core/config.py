@@ -17,9 +17,23 @@ class Settings(BaseSettings):
     
     # Security
     SECRET_KEY: str = Field(..., min_length=32)
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15  # 15 minutes for high security
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    ALGORITHM: str = "HS256"
+    ALGORITHM: str = "RS256"  # Using RS256 instead of HS256
+    
+    # Authentication
+    MFA_REQUIRED: bool = False  # Set to True to require MFA for all users
+    PASSWORD_MIN_LENGTH: int = 14
+    PASSWORD_HISTORY_COUNT: int = 8
+    ACCOUNT_LOCKOUT_ATTEMPTS: int = 5
+    ACCOUNT_LOCKOUT_DURATION_MINUTES: int = 30
+    SESSION_TIMEOUT_MINUTES: int = 15
+    MAX_CONCURRENT_SESSIONS: int = 2
+    
+    # Argon2 settings (OWASP recommended)
+    ARGON2_MEMORY_COST: int = 19456  # 19 MiB
+    ARGON2_TIME_COST: int = 2
+    ARGON2_PARALLELISM: int = 1
     
     # Database
     DATABASE_URL: str = Field(..., description="PostgreSQL database URL")

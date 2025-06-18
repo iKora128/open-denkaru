@@ -21,6 +21,12 @@ from sqlmodel import SQLModel
 # Import all models to ensure they're registered with SQLModel
 from app.models.patient import Patient
 from app.models.prescription import Medication, PrescriptionItem, Prescription
+from app.models.lab_order import LabTest, LabOrder, LabOrderItem, LabResult
+from app.models.user import (
+    User, Role, Permission, 
+    UserRole, RolePermission,
+    UserSession, AuditLog, PasswordHistory
+)
 
 target_metadata = SQLModel.metadata
 
