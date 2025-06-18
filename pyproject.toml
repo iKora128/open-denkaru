@@ -8,7 +8,7 @@ dependencies = [
     # FastAPI Core
     "fastapi>=0.110.0",
     "uvicorn[standard]>=0.27.0",
-    "pydantic>=2.5.0",
+    "pydantic[email]>=2.5.0",
     "pydantic-settings>=2.1.0",
     
     # Database (SQLModel for modern approach)
@@ -18,10 +18,12 @@ dependencies = [
     "alembic>=1.13.0",
     "greenlet>=3.0.0",
     
-    # Security
+    # Security (2025 Enhanced)
     "python-jose[cryptography]>=3.3.0",
-    "passlib[bcrypt]>=1.7.4",
+    "argon2-cffi>=23.1.0",
+    "pyotp>=2.9.0",
     "python-multipart>=0.0.6",
+    "cryptography>=42.0.0",
     
     # Utilities
     "python-dateutil>=2.8.2",
