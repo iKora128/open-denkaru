@@ -1,0 +1,311 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Apple System Font Stack */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+/* CSS Variables for Dynamic Theming */
+:root {
+  /* Light Theme */
+  --color-background: theme('colors.white');
+  --color-foreground: theme('colors.system.gray.900');
+  --color-primary: theme('colors.apple.blue');
+  --color-secondary: theme('colors.system.gray.600');
+  --color-accent: theme('colors.apple.purple');
+  --color-border: theme('colors.system.gray.200');
+  --color-glass: rgba(255, 255, 255, 0.1);
+  --color-glass-border: rgba(255, 255, 255, 0.2);
+  
+  /* Shadows */
+  --shadow-glass: 0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --shadow-focus: 0 0 0 3px rgba(0, 122, 255, 0.3);
+  
+  /* Spacing */
+  --space-unit: 4px;
+  
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
+
+/* Dark Theme */
+.dark {
+  --color-background: theme('colors.system.gray.900');
+  --color-foreground: theme('colors.white');
+  --color-primary: theme('colors.apple.blue');
+  --color-secondary: theme('colors.system.gray.400');
+  --color-accent: theme('colors.apple.purple');
+  --color-border: theme('colors.system.gray.700');
+  --color-glass: rgba(0, 0, 0, 0.3);
+  --color-glass-border: rgba(255, 255, 255, 0.1);
+  
+  --shadow-glass: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Base Styles */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+  line-height: 1.5;
+  color: var(--color-foreground);
+  background: var(--color-background);
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+/* Focus Styles for Accessibility */
+*:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-sm);
+}
+
+/* Button Focus */
+button:focus-visible,
+input[type="button"]:focus-visible,
+input[type="submit"]:focus-visible {
+  box-shadow: var(--shadow-focus);
+}
+
+/* Form Elements */
+input, textarea, select {
+  font-family: inherit;
+}
+
+/* Liquid Glass Components */
+@layer components {
+  .glass-card {
+    @apply glass rounded-xl p-6 border border-glass-border;
+    backdrop-filter: blur(16px) saturate(180%);
+    background: var(--color-glass);
+    border: 1px solid var(--color-glass-border);
+    box-shadow: var(--shadow-glass);
+  }
+  
+  .glass-button {
+    @apply glass rounded-lg px-4 py-2 border border-glass-border;
+    backdrop-filter: blur(12px) saturate(160%);
+    background: var(--color-glass);
+    border: 1px solid var(--color-glass-border);
+    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+  
+  .glass-button:hover {
+    background: rgba(var(--color-primary), 0.1);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-glass), 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .glass-button:active {
+    transform: translateY(0);
+  }
+  
+  .glass-input {
+    @apply glass rounded-lg px-3 py-2 border border-glass-border;
+    backdrop-filter: blur(12px) saturate(160%);
+    background: var(--color-glass);
+    border: 1px solid var(--color-glass-border);
+    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+  
+  .glass-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-focus);
+  }
+  
+  /* Medical Status Indicators */
+  .status-indicator {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .status-normal {
+    @apply bg-medical-success/10 text-medical-success border border-medical-success/20;
+  }
+  
+  .status-warning {
+    @apply bg-medical-warning/10 text-medical-warning border border-medical-warning/20;
+  }
+  
+  .status-critical {
+    @apply bg-medical-error/10 text-medical-error border border-medical-error/20;
+  }
+  
+  .status-info {
+    @apply bg-medical-info/10 text-medical-info border border-medical-info/20;
+  }
+  
+  /* Navigation */
+  .nav-link {
+    @apply relative px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200;
+    @apply hover:bg-glass-primary hover:backdrop-blur-sm;
+  }
+  
+  .nav-link.active {
+    @apply bg-apple-blue/10 text-apple-blue;
+  }
+  
+  .nav-link.active::after {
+    content: '';
+    @apply absolute bottom-0 left-0 right-0 h-0.5 bg-apple-blue rounded-full;
+  }
+  
+  /* Card Layouts */
+  .card-grid {
+    @apply grid gap-6;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+  
+  .patient-card {
+    @apply glass-card hover:shadow-glass-lg transition-all duration-300;
+    @apply hover:scale-[1.02] hover:-translate-y-1;
+  }
+  
+  /* Animations */
+  .fade-in {
+    animation: fadeIn 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+  
+  .slide-up {
+    animation: slideUp 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+  
+  .bounce-gentle {
+    animation: bounceGentle 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+  
+  /* Scrollbar Styling */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: var(--color-glass);
+    border-radius: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--color-secondary);
+  }
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounceGentle {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.02) translateY(-5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Medical-specific Utilities */
+.medical-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.vitals-display {
+  @apply glass-card text-center;
+}
+
+.vitals-value {
+  @apply text-3xl font-bold text-apple-blue;
+}
+
+.vitals-label {
+  @apply text-sm text-system-gray-600 mt-1;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .glass-card {
+    @apply p-4;
+  }
+  
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Print Styles for Medical Records */
+@media print {
+  .glass-card {
+    background: white;
+    border: 1px solid #e5e5ea;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  
+  .nav-link, .glass-button {
+    display: none;
+  }
+}

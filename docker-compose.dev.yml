@@ -1,0 +1,114 @@
+# Development-only docker-compose override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  # Development database with additional tools
+  postgres:
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=open_denkaru_dev
+      - POSTGRES_USER=dev_user
+      - POSTGRES_PASSWORD=dev_password
+    volumes:
+      - ./database/dev-init:/docker-entrypoint-initdb.d
+
+  # Development backend with hot reload
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=debug
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:3001
+    volumes:
+      - ./backend:/app
+      - ./logs:/app/logs
+    command: >
+      sh -c "
+        pip install -e . &&
+        uvicorn main:app --host 0.0.0.0 --port 8000 --reload --log-level debug
+      "
+
+  # Development frontend with hot reload
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev -- --port 3000
+
+  # pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: open-denkaru-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@open-denkaru.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_LISTEN_PORT: 80
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - denkaru-network
+
+  # Redis Commander for cache management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: open-denkaru-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - denkaru-network
+
+  # Jupyter for AI development and research
+  jupyter:
+    build:
+      context: ./research
+      dockerfile: Dockerfile.jupyter
+    container_name: open-denkaru-jupyter
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=denkaru-research
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./research/notebooks:/home/jovyan/work
+      - ./backend:/home/jovyan/backend
+      - ./data:/home/jovyan/data
+    depends_on:
+      - postgres
+      - ollama
+    networks:
+      - denkaru-network
+
+  # Mailhog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: open-denkaru-mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - denkaru-network
+
+volumes:
+  pgadmin_data:
+    driver: local

@@ -1,0 +1,48 @@
+FROM node:20-alpine
+
+LABEL maintainer="Open Denkaru Team <dev@open-denkaru.org>"
+LABEL description="Open Denkaru Frontend Development Container - Next.js 14 + React 18"
+
+# Set environment variables for stable development
+ENV NODE_ENV=development \
+    NEXT_TELEMETRY_DISABLED=1 \
+    TZ=Asia/Tokyo \
+    # Use stable versions
+    NEXT_VERSION=14 \
+    REACT_VERSION=18
+
+# Set timezone
+RUN apk add --no-cache tzdata && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone
+
+# Install global dependencies
+RUN npm install -g npm@latest
+
+# Set work directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --no-audit --no-fund
+
+# Copy source code
+COPY . .
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 -G nodejs && \
+    chown -R nextjs:nodejs /app
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:3000 || exit 1
+
+# Default command
+CMD ["npm", "run", "dev"]

@@ -1,0 +1,64 @@
+FROM jupyter/scipy-notebook:python-3.11
+
+LABEL maintainer="Open Denkaru Team <dev@open-denkaru.org>"
+LABEL description="Open Denkaru Research and AI Development Container"
+
+# Set environment variables
+ENV TZ=Asia/Tokyo
+
+# Switch to root for system installations
+USER root
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    graphviz \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages for medical AI research
+RUN pip install --no-cache-dir \
+    fastapi \
+    sqlalchemy \
+    alembic \
+    psycopg2-binary \
+    redis \
+    numpy \
+    pandas \
+    scikit-learn \
+    torch \
+    torchvision \
+    transformers \
+    huggingface-hub \
+    opencv-python-headless \
+    pydicom \
+    nibabel \
+    SimpleITK \
+    plotly \
+    seaborn \
+    jupyter-ai \
+    jupyter-collaboration \
+    jupyterlab-git \
+    jupyterlab-lsp \
+    python-lsp-server
+
+# Install JupyterLab extensions
+RUN jupyter lab build
+
+# Create directories for research work
+RUN mkdir -p /home/jovyan/work/notebooks \
+             /home/jovyan/work/data \
+             /home/jovyan/work/models \
+             /home/jovyan/work/experiments
+
+# Switch back to jovyan user
+USER jovyan
+
+# Set work directory
+WORKDIR /home/jovyan/work
+
+# Expose JupyterLab port
+EXPOSE 8888
+
+# Default command
+CMD ["start-notebook.sh", "--NotebookApp.token='denkaru-research'", "--NotebookApp.password=''"]
