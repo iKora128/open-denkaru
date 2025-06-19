@@ -31,7 +31,7 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
-async def get_session() -> AsyncSession:
+async def get_session():
     """Dependency to get database session."""
     async with AsyncSessionLocal() as session:
         try:

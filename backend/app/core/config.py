@@ -2,7 +2,7 @@
 Configuration settings for Open Denkaru EMR.
 """
 from typing import List, Optional
-from pydantic import Field, validator
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
@@ -47,6 +47,14 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001"
     ALLOWED_HOSTS: str = "localhost,127.0.0.1"
     
+    @property 
+    def cors_origins_list(self) -> List[str]:
+        return [i.strip() for i in self.CORS_ORIGINS.split(",")]
+    
+    @property
+    def allowed_hosts_list(self) -> List[str]:
+        return [i.strip() for i in self.ALLOWED_HOSTS.split(",")]
+    
     # Logging
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"
@@ -64,13 +72,6 @@ class Settings(BaseSettings):
     ORCA_API_URL: Optional[str] = None
     ORCA_API_KEY: Optional[str] = None
     
-    @property 
-    def cors_origins_list(self) -> List[str]:
-        return [i.strip() for i in self.CORS_ORIGINS.split(",")]
-    
-    @property
-    def allowed_hosts_list(self) -> List[str]:
-        return [i.strip() for i in self.ALLOWED_HOSTS.split(",")]
     
     class Config:
         env_file = ".env"
