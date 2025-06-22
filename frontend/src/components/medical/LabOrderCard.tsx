@@ -25,15 +25,10 @@ const statusColors = {
   [LabOrderStatus.DRAFT]: 'warning',
   [LabOrderStatus.ORDERED]: 'normal',
   [LabOrderStatus.IN_PROGRESS]: 'warning',
-  [LabOrderStatus.COMPLETED]: 'normal',
-  [LabOrderStatus.CANCELLED]: 'critical'
+  [LabOrderStatus.COMPLETED]: 'success',
+  [LabOrderStatus.CANCELLED]: 'error'
 } as const;
 
-const priorityColors = {
-  [LabOrderPriority.ROUTINE]: 'text-gray-600',
-  [LabOrderPriority.URGENT]: 'text-orange-600',
-  [LabOrderPriority.STAT]: 'text-red-600'
-};
 
 export function LabOrderCard({ 
   labOrder, 
@@ -67,10 +62,9 @@ export function LabOrderCard({
               </div>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <StatusBadge 
-                status={statusColors[labOrder.status]} 
-                text={labOrder.status}
-              />
+              <StatusBadge status={statusColors[labOrder.status]}>
+                {labOrder.status}
+              </StatusBadge>
               <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                 labOrder.priority === LabOrderPriority.ROUTINE 
                   ? 'bg-gray-100 text-gray-700'

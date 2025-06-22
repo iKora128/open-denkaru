@@ -1,0 +1,435 @@
+# Alertmanager Configuration for Medical EMR Backup System
+# Medical-grade alerting with HIPAA compliance and emergency response
+
+global:
+  smtp_smarthost: 'smtp.medical-emr.local:587'
+  smtp_from: 'alerts@medical-emr.local'
+  smtp_auth_username: 'alerts@medical-emr.local'
+  smtp_auth_password: 'smtp_secure_password_2025'
+  smtp_require_tls: true
+
+# ==================================================
+# ROUTE CONFIGURATION
+# ==================================================
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default-medical-alerts'
+  
+  routes:
+    # Critical medical system alerts (immediate response)
+    - match:
+        severity: critical
+      receiver: 'critical-medical-alerts'
+      group_wait: 10s
+      repeat_interval: 30m
+      routes:
+        - match:
+            alertname: BackupFailureCritical
+          receiver: 'backup-emergency'
+        - match:
+            alertname: DatabaseDown
+          receiver: 'database-emergency'
+        - match:
+            alertname: ReplicationFailure
+          receiver: 'replication-emergency'
+        - match:
+            alertname: EncryptionFailure
+          receiver: 'security-emergency'
+
+    # High priority alerts (medical staff notification)
+    - match:
+        severity: high
+      receiver: 'high-priority-medical-alerts'
+      group_wait: 20s
+      repeat_interval: 2h
+
+    # Warning alerts (administrator notification)
+    - match:
+        severity: warning
+      receiver: 'warning-medical-alerts'
+      repeat_interval: 8h
+
+    # Information alerts (log only)
+    - match:
+        severity: info
+      receiver: 'info-medical-alerts'
+      repeat_interval: 24h
+
+    # Backup-specific routing
+    - match:
+        job: backup-system
+      receiver: 'backup-alerts'
+      routes:
+        - match:
+            alertname: BackupDelayed
+          receiver: 'backup-delayed-alerts'
+        - match:
+            alertname: BackupCorrupted
+          receiver: 'backup-corruption-alerts'
+
+    # Compliance and audit alerts
+    - match:
+        compliance: HIPAA
+      receiver: 'compliance-alerts'
+      repeat_interval: 1h
+
+    # Silence during maintenance windows
+    - match:
+        maintenance: 'true'
+      receiver: 'null'
+
+# ==================================================
+# INHIBITION RULES
+# ==================================================
+inhibit_rules:
+  # Don't alert on backup issues if database is down
+  - source_match:
+      alertname: DatabaseDown
+    target_match:
+      job: backup-system
+    equal: ['cluster', 'instance']
+
+  # Don't alert on replication lag if primary is down
+  - source_match:
+      alertname: DatabaseDown
+      role: primary
+    target_match:
+      alertname: ReplicationLag
+    equal: ['cluster']
+
+  # Don't send warning if critical alert is firing
+  - source_match:
+      severity: critical
+    target_match:
+      severity: warning
+    equal: ['alertname', 'cluster', 'instance']
+
+# ==================================================
+# RECEIVERS
+# ==================================================
+receivers:
+  # Default medical alerts
+  - name: 'default-medical-alerts'
+    email_configs:
+      - to: 'admin@medical-emr.local'
+        subject: 'Medical EMR Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          Medical EMR System Alert
+          
+          Alert: {{ .GroupLabels.alertname }}
+          Severity: {{ .CommonLabels.severity }}
+          Cluster: {{ .CommonLabels.cluster }}
+          
+          {{ range .Alerts }}
+          Instance: {{ .Labels.instance }}
+          Description: {{ .Annotations.description }}
+          Summary: {{ .Annotations.summary }}
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}
+          {{ end }}
+          
+          Please check the medical EMR monitoring dashboard for details.
+          Dashboard: https://monitoring.medical-emr.local/grafana
+
+  # Critical medical system alerts (emergency response)
+  - name: 'critical-medical-alerts'
+    email_configs:
+      - to: 'emergency@medical-emr.local,cto@medical-emr.local,dba@medical-emr.local'
+        subject: '🚨 CRITICAL: Medical EMR Emergency - {{ .GroupLabels.alertname }}'
+        headers:
+          Priority: 'high'
+          X-Priority: '1'
+        body: |
+          🚨 CRITICAL MEDICAL EMR EMERGENCY 🚨
+          
+          This is an emergency alert for the medical EMR system.
+          Immediate response required to ensure patient care continuity.
+          
+          Alert: {{ .GroupLabels.alertname }}
+          Severity: CRITICAL
+          Cluster: {{ .CommonLabels.cluster }}
+          
+          {{ range .Alerts }}
+          Instance: {{ .Labels.instance }}
+          Description: {{ .Annotations.description }}
+          Summary: {{ .Annotations.summary }}
+          Started: {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}
+          {{ end }}
+          
+          IMMEDIATE ACTIONS REQUIRED:
+          1. Check system status: https://monitoring.medical-emr.local
+          2. Follow emergency procedures in runbook
+          3. Notify medical staff if patient care is affected
+          4. Contact vendor support if needed
+          
+          Emergency Runbook: https://docs.medical-emr.local/emergency
+          Status Page: https://status.medical-emr.local
+    
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#medical-emr-alerts'
+        username: 'Medical EMR Alertmanager'
+        icon_emoji: ':rotating_light:'
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        text: |
+          *CRITICAL MEDICAL EMR EMERGENCY*
+          
+          {{ range .Alerts }}
+          *Alert:* {{ .Labels.alertname }}
+          *Instance:* {{ .Labels.instance }}
+          *Description:* {{ .Annotations.description }}
+          *Started:* {{ .StartsAt.Format "15:04:05 MST" }}
+          {{ end }}
+          
+          <https://monitoring.medical-emr.local|Check Monitoring Dashboard>
+
+    webhook_configs:
+      - url: 'https://api.pagerduty.com/generic/2010-04-15/create_event.json'
+        http_config:
+          basic_auth:
+            username: 'medical-emr-pagerduty-key'
+            password: 'your-pagerduty-integration-key'
+
+  # Backup emergency alerts
+  - name: 'backup-emergency'
+    email_configs:
+      - to: 'backup-admin@medical-emr.local,dba@medical-emr.local,compliance@medical-emr.local'
+        subject: '🚨 BACKUP EMERGENCY: {{ .GroupLabels.alertname }}'
+        body: |
+          🚨 BACKUP SYSTEM EMERGENCY 🚨
+          
+          Critical backup system failure detected.
+          Medical record data protection may be compromised.
+          
+          {{ range .Alerts }}
+          *Alert:* {{ .Labels.alertname }}
+          *Instance:* {{ .Labels.instance }}
+          *Description:* {{ .Annotations.description }}
+          *Backup Type:* {{ .Labels.backup_type }}
+          *Last Success:* {{ .Labels.last_successful_backup }}
+          {{ end }}
+          
+          IMMEDIATE ACTIONS:
+          1. Verify data integrity
+          2. Check backup storage systems
+          3. Initiate manual backup if needed
+          4. Document incident for compliance
+          
+          Backup Dashboard: https://monitoring.medical-emr.local/backup
+
+  # Database emergency alerts
+  - name: 'database-emergency'
+    email_configs:
+      - to: 'dba@medical-emr.local,sysadmin@medical-emr.local,medical-staff@medical-emr.local'
+        subject: '🚨 DATABASE EMERGENCY: {{ .GroupLabels.alertname }}'
+        body: |
+          🚨 DATABASE SYSTEM EMERGENCY 🚨
+          
+          Critical database failure detected.
+          Patient care systems may be affected.
+          
+          {{ range .Alerts }}
+          *Alert:* {{ .Labels.alertname }}
+          *Instance:* {{ .Labels.instance }}
+          *Description:* {{ .Annotations.description }}
+          *Database:* {{ .Labels.database }}
+          {{ end }}
+          
+          IMMEDIATE ACTIONS:
+          1. Check database connectivity
+          2. Verify replica status
+          3. Contact medical staff about system availability
+          4. Initiate failover procedures if necessary
+          
+          Database Dashboard: https://monitoring.medical-emr.local/database
+
+  # Replication emergency alerts
+  - name: 'replication-emergency'
+    email_configs:
+      - to: 'dba@medical-emr.local,backup-admin@medical-emr.local'
+        subject: '🚨 REPLICATION EMERGENCY: {{ .GroupLabels.alertname }}'
+        body: |
+          🚨 DATABASE REPLICATION EMERGENCY 🚨
+          
+          Critical replication failure detected.
+          Disaster recovery capability may be compromised.
+          
+          {{ range .Alerts }}
+          *Alert:* {{ .Labels.alertname }}
+          *Instance:* {{ .Labels.instance }}
+          *Description:* {{ .Annotations.description }}
+          *Replication Lag:* {{ .Labels.replication_lag }}
+          *Replica Status:* {{ .Labels.replica_status }}
+          {{ end }}
+          
+          IMMEDIATE ACTIONS:
+          1. Check replica connectivity
+          2. Verify WAL shipping
+          3. Monitor replication lag
+          4. Prepare for manual failover if needed
+
+  # Security emergency alerts
+  - name: 'security-emergency'
+    email_configs:
+      - to: 'security@medical-emr.local,compliance@medical-emr.local,ciso@medical-emr.local'
+        subject: '🔒 SECURITY EMERGENCY: {{ .GroupLabels.alertname }}'
+        body: |
+          🔒 SECURITY EMERGENCY 🔒
+          
+          Critical security incident detected.
+          Medical data protection may be compromised.
+          
+          {{ range .Alerts }}
+          *Alert:* {{ .Labels.alertname }}
+          *Instance:* {{ .Labels.instance }}
+          *Description:* {{ .Annotations.description }}
+          *Security Level:* {{ .Labels.security_level }}
+          {{ end }}
+          
+          IMMEDIATE ACTIONS:
+          1. Verify encryption status
+          2. Check access logs
+          3. Document security incident
+          4. Contact security team
+          
+          Security Dashboard: https://monitoring.medical-emr.local/security
+
+  # High priority medical alerts
+  - name: 'high-priority-medical-alerts'
+    email_configs:
+      - to: 'admin@medical-emr.local,medical-tech@medical-emr.local'
+        subject: 'High Priority: Medical EMR Alert - {{ .GroupLabels.alertname }}'
+        body: |
+          High Priority Medical EMR Alert
+          
+          {{ range .Alerts }}
+          Alert: {{ .Labels.alertname }}
+          Instance: {{ .Labels.instance }}
+          Description: {{ .Annotations.description }}
+          Started: {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}
+          {{ end }}
+          
+          Please investigate promptly to ensure system reliability.
+
+  # Warning medical alerts
+  - name: 'warning-medical-alerts'
+    email_configs:
+      - to: 'admin@medical-emr.local'
+        subject: 'Warning: Medical EMR - {{ .GroupLabels.alertname }}'
+        body: |
+          Medical EMR Warning Alert
+          
+          {{ range .Alerts }}
+          Alert: {{ .Labels.alertname }}
+          Instance: {{ .Labels.instance }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+  # Info medical alerts
+  - name: 'info-medical-alerts'
+    email_configs:
+      - to: 'logs@medical-emr.local'
+        subject: 'Info: Medical EMR - {{ .GroupLabels.alertname }}'
+        body: |
+          Medical EMR Information Alert
+          
+          {{ range .Alerts }}
+          Alert: {{ .Labels.alertname }}
+          Instance: {{ .Labels.instance }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+  # Backup-specific alerts
+  - name: 'backup-alerts'
+    email_configs:
+      - to: 'backup-admin@medical-emr.local'
+        subject: 'Backup Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          Medical EMR Backup System Alert
+          
+          {{ range .Alerts }}
+          Alert: {{ .Labels.alertname }}
+          Backup Type: {{ .Labels.backup_type }}
+          Instance: {{ .Labels.instance }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+  # Backup delayed alerts
+  - name: 'backup-delayed-alerts'
+    email_configs:
+      - to: 'backup-admin@medical-emr.local,dba@medical-emr.local'
+        subject: 'Backup Delayed: {{ .GroupLabels.alertname }}'
+        body: |
+          Medical EMR Backup Delayed
+          
+          {{ range .Alerts }}
+          Alert: {{ .Labels.alertname }}
+          Expected Time: {{ .Labels.expected_time }}
+          Current Delay: {{ .Labels.delay_minutes }} minutes
+          {{ end }}
+          
+          Please check backup system status.
+
+  # Backup corruption alerts
+  - name: 'backup-corruption-alerts'
+    email_configs:
+      - to: 'backup-admin@medical-emr.local,dba@medical-emr.local,compliance@medical-emr.local'
+        subject: 'URGENT: Backup Corruption Detected'
+        body: |
+          🚨 BACKUP CORRUPTION DETECTED 🚨
+          
+          Medical record backup integrity compromised.
+          Immediate verification and remediation required.
+          
+          {{ range .Alerts }}
+          Alert: {{ .Labels.alertname }}
+          Backup File: {{ .Labels.backup_file }}
+          Corruption Type: {{ .Labels.corruption_type }}
+          {{ end }}
+          
+          REQUIRED ACTIONS:
+          1. Verify backup integrity
+          2. Create new backup immediately
+          3. Document incident for compliance
+          4. Check storage system health
+
+  # Compliance alerts
+  - name: 'compliance-alerts'
+    email_configs:
+      - to: 'compliance@medical-emr.local,audit@medical-emr.local'
+        subject: 'Compliance Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          Medical EMR Compliance Alert
+          
+          {{ range .Alerts }}
+          Alert: {{ .Labels.alertname }}
+          Compliance Type: {{ .Labels.compliance }}
+          Description: {{ .Annotations.description }}
+          Regulation: {{ .Labels.regulation }}
+          {{ end }}
+          
+          Please review and ensure regulatory compliance.
+
+  # Null receiver for silencing
+  - name: 'null'
+
+# ==================================================
+# TEMPLATES
+# ==================================================
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# ==================================================
+# GLOBAL CONFIGURATION
+# ==================================================
+global:
+  resolve_timeout: 5m
+  http_config:
+    tls_config:
+      insecure_skip_verify: false
+  
+  # HIPAA compliance settings
+  smtp_hello: 'medical-emr.local'
+  smtp_require_tls: true

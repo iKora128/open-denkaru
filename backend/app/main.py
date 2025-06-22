@@ -15,6 +15,8 @@ from app.core.config import settings
 from app.core.database import engine
 from app.api.routes import api_router
 from app.core.logging import setup_logging
+from app.core.rate_limiter import RateLimitMiddleware
+from app.core.input_sanitizer import sanitize_request_data
 
 
 # Configure structured logging
@@ -54,7 +56,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Security middlewares
+# Security middlewares - order matters!
+# Rate limiting should be first to prevent abuse
+app.add_middleware(RateLimitMiddleware)
+
 app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=settings.allowed_hosts_list,
@@ -106,6 +111,40 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "error": "Validation Error",
             "detail": "Invalid request data",
             "validation_errors": exc.errors(),
+        },
+    )
+
+
+@app.exception_handler(ValueError)
+async def value_error_handler(request: Request, exc: ValueError):
+    """Handle input sanitization and validation errors."""
+    error_msg = str(exc)
+    
+    # Check if this is a security-related validation error
+    if any(keyword in error_msg.lower() for keyword in ['dangerous', 'injection', 'invalid', 'security']):
+        logger.warning(
+            "Security validation error",
+            error=error_msg,
+            path=request.url.path,
+            method=request.method,
+            client_ip=request.client.host,
+        )
+        
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "error": "Input Validation Error",
+                "detail": "Input contains invalid or potentially dangerous content",
+                "security_note": "This incident has been logged for security review"
+            },
+        )
+    
+    # Regular value error
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={
+            "error": "Value Error",
+            "detail": error_msg,
         },
     )
 

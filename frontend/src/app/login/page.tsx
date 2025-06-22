@@ -2,13 +2,15 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Shield, Heart, Activity } from 'lucide-react';
+import { Eye, EyeOff, Shield, Heart, Activity, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { authService, routeGuard } from '@/lib/auth';
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -17,15 +19,67 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
     
-    // Simulate login process
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Redirect to dashboard (temporary)
-    window.location.href = '/dashboard';
+    try {
+      // Development mode: Allow direct login without backend
+      if (process.env.NODE_ENV === 'development') {
+        // 開発用の簡単な認証
+        if (formData.username && formData.password) {
+          // Mock successful authentication using proper token keys
+          const mockUser = {
+            id: '1',
+            username: formData.username,
+            full_name: formData.username === 'admin' ? '管理者' : '田中医師',
+            roles: [formData.username === 'admin' ? 'admin' : 'doctor'],
+            permissions: ['read_patient', 'create_patient', 'read_prescription', 'manage_settings'],
+            department: formData.username === 'admin' ? '管理部' : '内科',
+            position: formData.username === 'admin' ? 'システム管理者' : '主治医'
+          };
+          
+          // Use the same token keys as the auth service
+          localStorage.setItem('od_access_token', 'dev_token_' + Date.now());
+          localStorage.setItem('od_refresh_token', 'dev_refresh_token_' + Date.now());
+          localStorage.setItem('od_user_data', JSON.stringify(mockUser));
+          
+          // Redirect to dashboard
+          window.location.href = '/dashboard';
+          return;
+        }
+      }
+
+      // Production mode: Call authentication service
+      const { tokens } = await authService.login({
+        username: formData.username,
+        password: formData.password
+      });
+
+      // Check for MFA requirement
+      if (tokens.mfa_required) {
+        setError('MFA認証が必要です。現在未実装です。');
+        return;
+      }
+
+      // Success - redirect to dashboard
+      routeGuard.redirectToDashboard();
+    } catch (error: any) {
+      console.error('Login failed:', error);
+      setError(
+        error.message?.includes('401') || error.message?.includes('Invalid credentials')
+          ? 'ユーザー名またはパスワードが正しくありません。'
+          : 'ログインに失敗しました。しばらく待ってから再試行してください。'
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Clear error when user starts typing
+    if (error) {
+      setError(null);
+    }
+    
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
@@ -135,6 +189,27 @@ export default function LoginPage() {
             
             <CardContent className="pt-0">
               <form onSubmit={handleLogin} className="space-y-6">
+                {/* Error Message */}
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 rounded-lg bg-medical-error/10 border border-medical-error/20"
+                  >
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-medical-error mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-medical-error mb-1">
+                          ログインエラー
+                        </p>
+                        <p className="text-xs text-medical-error/80">
+                          {error}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* Username Field */}
                 <div className="space-y-2">
                   <label htmlFor="username" className="text-sm font-medium text-system-gray-700">
@@ -212,6 +287,20 @@ export default function LoginPage() {
                 >
                   {isLoading ? 'ログイン中...' : 'ログイン'}
                 </Button>
+
+                {/* Development Mode Info */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="p-4 rounded-lg bg-green-50 border border-green-200">
+                    <h4 className="text-sm font-medium text-green-800 mb-2">
+                      開発モード - テスト用アカウント
+                    </h4>
+                    <div className="text-xs text-green-700 space-y-1">
+                      <div>• ユーザー名: admin, doctor, nurse など</div>
+                      <div>• パスワード: 任意（何でも可）</div>
+                      <div>• 実際のバックエンド認証は不要</div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Additional Links */}
                 <div className="text-center space-y-3 pt-4 border-t border-system-gray-100">

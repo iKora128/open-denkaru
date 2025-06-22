@@ -9,12 +9,12 @@ import {
   SparklesIcon,
   MagnifyingGlassIcon,
   BeakerIcon,
-  PillIcon,
   DocumentTextIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
   ClockIcon
 } from '@heroicons/react/24/outline';
+import { Pill } from 'lucide-react';
 
 interface AIAssistantProps {
   className?: string;
@@ -44,7 +44,7 @@ const AI_FEATURES = [
     id: 'drug-interactions',
     title: '薬物相互作用',
     description: '処方薬の相互作用をチェック',
-    icon: PillIcon,
+    icon: Pill,
     color: 'bg-red-500'
   },
   {
@@ -103,12 +103,13 @@ export function AIAssistant({ className = '' }: AIAssistantProps) {
     setResponse(null);
 
     try {
-      const endpoint = {
+      const endpoints = {
         'diagnose': '/api/ai/diagnose',
         'drug-interactions': '/api/ai/drug-interactions',
         'lab-tests': '/api/ai/suggest-lab-tests',
         'soap-note': '/api/ai/generate-soap'
-      }[request.type];
+      } as const;
+      const endpoint = endpoints[request.type as keyof typeof endpoints];
 
       const response = await fetch(`http://localhost:8000${endpoint}`, {
         method: 'POST',

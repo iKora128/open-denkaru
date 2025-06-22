@@ -16,6 +16,9 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@blocknote/core": "^0.31.3",
+    "@blocknote/mantine": "^0.31.3",
+    "@blocknote/react": "^0.31.3",
     "@headlessui/react": "^1.7.17",
     "@heroicons/react": "^2.0.18",
     "@hookform/resolvers": "^3.3.2",
@@ -76,8 +79,8 @@
     "@testing-library/jest-dom": "^6.1.6",
     "@testing-library/react": "^14.1.2",
     "@testing-library/user-event": "^14.5.1",
-    "@typescript-eslint/eslint-plugin": "^6.17.0",
-    "@typescript-eslint/parser": "^6.17.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.56.0",
     "eslint-config-next": "^14.0.4",
     "eslint-plugin-react": "^7.33.2",

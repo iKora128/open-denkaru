@@ -1,56 +1,208 @@
+# Prometheus Configuration for Medical EMR Backup Monitoring
+# Comprehensive monitoring for medical-grade backup system
+
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
+  external_labels:
+    cluster: 'medical-emr-backup'
+    environment: 'production'
+    facility: 'medical-emr-facility'
+    compliance_level: 'HIPAA'
 
 rule_files:
-  # - "first_rules.yml"
-  # - "second_rules.yml"
+  - "backup-alerts.yml"
+  - "replication-alerts.yml"
+  - "medical-compliance-alerts.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
 
 scrape_configs:
-  # Prometheus itself
+  # ==================================================
+  # PROMETHEUS SELF-MONITORING
+  # ==================================================
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
+    scrape_interval: 30s
+    metrics_path: /metrics
 
-  # FastAPI Backend
+  # ==================================================
+  # POSTGRESQL DATABASE MONITORING
+  # ==================================================
+  - job_name: 'postgres-primary'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'postgres-primary'
+      - source_labels: [__address__]
+        target_label: role
+        replacement: 'primary'
+
+  - job_name: 'postgres-replicas'
+    static_configs:
+      - targets: 
+        - 'postgres-replica-01:9187'
+        - 'postgres-replica-02:9187'
+    scrape_interval: 30s
+    metrics_path: /metrics
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: 'postgres-replica-(\d+):.*'
+        target_label: instance
+        replacement: 'postgres-replica-${1}'
+      - source_labels: [__address__]
+        target_label: role
+        replacement: 'replica'
+
+  # ==================================================
+  # BACKUP SYSTEM MONITORING
+  # ==================================================
+  - job_name: 'backup-system'
+    static_configs:
+      - targets: ['backup-exporter:9188']
+    scrape_interval: 60s
+    metrics_path: /metrics
+    scrape_timeout: 30s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: service
+        replacement: 'backup-system'
+
+  - job_name: 'backup-verification'
+    static_configs:
+      - targets: ['backup-verifier:9189']
+    scrape_interval: 300s
+    metrics_path: /metrics
+    scrape_timeout: 60s
+
+  - job_name: 'disaster-recovery'
+    static_configs:
+      - targets: ['dr-coordinator:8080']
+    scrape_interval: 60s
+    metrics_path: /dr-metrics
+    scrape_timeout: 30s
+
+  # ==================================================
+  # REDIS MONITORING
+  # ==================================================
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # ==================================================
+  # MEDICAL EMR APPLICATION MONITORING
+  # ==================================================
   - job_name: 'backend'
     static_configs:
       - targets: ['backend:8000']
     metrics_path: '/metrics'
     scrape_interval: 30s
 
-  # Next.js Frontend (if metrics enabled)
   - job_name: 'frontend'
     static_configs:
       - targets: ['frontend:3000']
     metrics_path: '/api/metrics'
     scrape_interval: 30s
 
-  # PostgreSQL Database
-  - job_name: 'postgres'
-    static_configs:
-      - targets: ['postgres:5432']
-    scrape_interval: 30s
-
-  # Redis Cache
-  - job_name: 'redis'
-    static_configs:
-      - targets: ['redis:6379']
-    scrape_interval: 30s
-
-  # Nginx Proxy
   - job_name: 'nginx'
     static_configs:
       - targets: ['nginx:80']
     scrape_interval: 30s
 
-  # Node Exporter (system metrics)
+  # ==================================================
+  # SYSTEM METRICS
+  # ==================================================
   - job_name: 'node-exporter'
     static_configs:
-      - targets: ['node-exporter:9100']
+      - targets: 
+        - 'backup-service:9100'
+        - 'postgres-primary:9100'
+        - 'postgres-replica-01:9100'
+        - 'postgres-replica-02:9100'
+        - 'node-exporter:9100'
+    scrape_interval: 30s
+    metrics_path: /metrics
 
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets:
-          # - alertmanager:9093
+  # ==================================================
+  # SECURITY AND COMPLIANCE MONITORING
+  # ==================================================
+  - job_name: 'security-audit'
+    static_configs:
+      - targets: ['backup-service:9190']
+    scrape_interval: 60s
+    metrics_path: /security-metrics
+    basic_auth:
+      username: 'audit_user'
+      password: 'audit_secure_password'
+
+  - job_name: 'encryption-status'
+    static_configs:
+      - targets: ['postgres-primary:5432']
+    scrape_interval: 300s
+    metrics_path: /encryption-status
+
+  # ==================================================
+  # BLACKBOX MONITORING (HEALTH CHECKS)
+  # ==================================================
+  - job_name: 'blackbox-backup-endpoints'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - http://backup-service:8080/health
+        - http://dr-coordinator:8080/health
+        - http://backup-verifier:8080/health
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  - job_name: 'blackbox-database-connectivity'
+    metrics_path: /probe
+    params:
+      module: [tcp_connect]
+    static_configs:
+      - targets:
+        - postgres-primary:5432
+        - postgres-replica-01:5432
+        - postgres-replica-02:5432
+        - redis:6379
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+# ==================================================
+# REMOTE WRITE CONFIGURATION
+# ==================================================
+remote_write:
+  - url: "https://prometheus-remote-storage.medical-emr.local/api/v1/write"
+    basic_auth:
+      username: "remote_write_user"
+      password: "remote_write_password"
+    queue_config:
+      max_samples_per_send: 1000
+      max_shards: 10
+      capacity: 10000
+    write_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'backup_.*|replication_.*|medical_.*'
+        action: keep

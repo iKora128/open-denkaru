@@ -5,12 +5,12 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { PrescriptionItem, DrugInteractionCheck } from '../../types/prescription';
 import { 
-  PillIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
   ClockIcon,
   ScaleIcon
 } from '@heroicons/react/24/outline';
+import { Pill } from 'lucide-react';
 
 interface MedicationCardProps {
   item: PrescriptionItem;
@@ -48,7 +48,7 @@ export function MedicationCard({
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <PillIcon className="h-5 w-5 text-blue-600" />
+                <Pill className="h-5 w-5 text-blue-600" />
                 {medication.name}
               </CardTitle>
               {medication.generic_name && (

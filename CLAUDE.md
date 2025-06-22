@@ -171,6 +171,131 @@ The system must comply with:
 - Document compliance mappings to Japanese regulations
 - Provide clear setup instructions for medical environments
 
+## Quality Assurance and Testing Standards
+
+### Mandatory Testing Protocol
+**CRITICAL**: All development work MUST follow this testing protocol before deployment:
+
+1. **Build Verification (Required)**
+   ```bash
+   # Frontend build verification
+   npm run build
+   # Must complete successfully with no TypeScript errors
+   
+   # Backend build verification
+   uv run pytest
+   # All tests must pass
+   ```
+
+2. **Code Quality Checks (Required)**
+   ```bash
+   # Frontend linting
+   npm run lint
+   # Must have zero errors, warnings acceptable
+   
+   # Type checking
+   npm run type-check
+   # Must pass with no type errors
+   
+   # Backend linting
+   uv run ruff check .
+   uv run mypy .
+   # Must pass all checks
+   ```
+
+3. **Performance Testing (Required)**
+   - Frontend pages must load in < 2 seconds
+   - API responses must be < 500ms for standard queries
+   - Database queries must be optimized (< 100ms for patient lookups)
+
+4. **Security Validation (Required)**
+   - All API endpoints must have proper authentication
+   - Input validation on all forms
+   - SQL injection prevention verified
+   - XSS protection validated
+
+### Development Workflow Requirements
+
+**Before ANY commit or pull request:**
+
+1. **Local Testing Suite**
+   ```bash
+   # Run full test suite
+   npm run build && npm run lint && npm run type-check
+   uv run pytest && uv run ruff check . && uv run mypy .
+   ```
+
+2. **Manual Verification**
+   - Start development server and verify core functionality
+   - Test at least 3 critical user flows (patient registration, medical record entry, prescription)
+   - Verify responsive design on mobile and desktop
+   - Check console for JavaScript errors
+
+3. **Performance Benchmarks**
+   - Dashboard load time: < 2 seconds
+   - Patient search response: < 500ms
+   - Form submission feedback: < 300ms
+
+### Zero-Tolerance Standards
+
+**The following issues will cause immediate rejection:**
+
+1. **Build Failures**: Code that doesn't compile/build successfully
+2. **Type Errors**: Any TypeScript compilation errors
+3. **Critical Security Flaws**: Unvalidated inputs, exposed secrets, SQL injection risks
+4. **Performance Regressions**: Pages loading > 3 seconds, API responses > 1 second
+5. **Medical Data Integrity**: Any code that could corrupt patient records
+
+### Testing Philosophy for Medical Systems
+
+**Medical-Grade Reliability**:
+- **99.9% Uptime Target**: System must be reliable for 24/7 healthcare operations
+- **Data Integrity**: Zero tolerance for data corruption or loss
+- **User Safety**: UI must prevent medical errors through validation and confirmation
+- **Audit Compliance**: All actions must be logged and traceable
+- **Performance Under Load**: System must handle 100+ concurrent users
+
+**Testing Pyramid for Healthcare**:
+1. **Unit Tests (70%)**: Every function that handles medical data
+2. **Integration Tests (20%)**: API endpoints and database interactions  
+3. **E2E Tests (10%)**: Critical clinical workflows
+4. **Manual Testing**: Usability and clinical workflow validation
+
+### Deployment Readiness Checklist
+
+**Before any production deployment:**
+
+- [ ] All automated tests passing (100%)
+- [ ] Performance benchmarks met
+- [ ] Security scan completed (no critical vulnerabilities)
+- [ ] Medical workflow validation by clinical team
+- [ ] Backup and recovery procedures tested
+- [ ] Monitoring and alerting configured
+- [ ] HIPAA compliance audit completed (for patient data)
+- [ ] Documentation updated (API docs, user guides)
+
+### Medical Emergency Protocol
+
+**For critical production issues:**
+
+1. **Immediate Response** (< 5 minutes)
+   - Take affected systems offline if patient safety at risk
+   - Notify medical staff of system status
+   - Activate backup procedures
+
+2. **Investigation and Fix** (< 30 minutes)
+   - Identify root cause
+   - Implement emergency patch
+   - Test fix in staging environment
+
+3. **Recovery and Post-Mortem** (< 2 hours)
+   - Deploy verified fix to production
+   - Verify all systems operational
+   - Conduct post-mortem analysis
+   - Update procedures to prevent recurrence
+
+**Remember**: In medical systems, software reliability directly impacts patient care and safety.
+
 ## Development Principles for Long-Term Viability
 
 ### Medical-Grade Development Strategy
@@ -201,6 +326,42 @@ The system must comply with:
 - **Annual Technology Roadmap**: Conservative planning for major upgrades
 - **Medical Community Engagement**: Participate in healthcare IT and regulatory discussions
 - **Conservative Upgrade Approach**: Minimum 6-month evaluation period for major technology changes
+
+### Code Quality and Error Checking Protocol
+
+**MANDATORY: Always run linting and type-checking before any commit or deployment**
+
+#### Frontend Quality Checks (Required)
+```bash
+# Type checking - MUST pass with zero errors
+npm run type-check
+
+# Linting - MUST pass with zero errors (warnings acceptable)
+npm run lint
+
+# Build verification - MUST complete successfully
+npm run build
+```
+
+#### Development Workflow Standards
+1. **Before Every Commit**: Run all quality checks
+2. **Before Every Pull Request**: Ensure clean build and type-check
+3. **Error Tolerance**: Zero TypeScript errors, ESLint warnings acceptable for unused type definitions
+4. **Medical Safety**: Any error that could affect patient data or medical workflows must be fixed immediately
+
+#### Common Error Patterns to Fix
+- **Unused imports**: Remove all unused imports to keep code clean
+- **Type safety**: Fix all TypeScript errors, especially optional chaining issues
+- **Missing type annotations**: Add proper type annotations for function parameters and return values
+- **Incorrect type usage**: Use `typeof EnumName[keyof typeof EnumName]` for enum value types
+
+#### When to Use Quality Checks
+- **During active development**: Check frequently while coding
+- **Before breaks**: Always run checks before stepping away from code
+- **After major changes**: Full quality check after significant refactoring
+- **Pre-deployment**: Complete verification before any production deployment
+
+**Remember**: In medical systems, code quality directly impacts patient safety. Never skip quality checks.
 
 ## Project Vision and Philosophy
 

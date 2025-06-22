@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, 
@@ -16,57 +16,174 @@ import {
   Menu,
   X,
   Shield,
-  Clock
+  Clock,
+  Stethoscope
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { authService } from '@/lib/auth';
+import type { CurrentUser } from '@/lib/api';
+import { useRouter, usePathname } from 'next/navigation';
+import { usePermissions } from '@/hooks/usePermissions';
+import { Permission, UserRole } from '@/types/user';
 
 interface NavigationProps {
   currentPage?: string;
 }
 
-export function Navigation({ currentPage = 'dashboard' }: NavigationProps) {
+export function Navigation({ currentPage }: NavigationProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notifications] = useState(3); // Mock notification count
+  const [user, setUser] = useState<CurrentUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const navigationItems = [
+  // Use permissions hook for role-based navigation
+  const {
+    hasPermission,
+    hasRole,
+    isMedicalStaff,
+    isAdminStaff,
+    canAccessPatientData,
+    canAccessPrescriptions,
+    canAccessMedicalRecords,
+    canManageUsers,
+    canManageSettings,
+    getUserInfo
+  } = usePermissions();
+
+  // Get current user information
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const currentUser = await authService.getCurrentUser();
+        setUser(currentUser);
+      } catch (error) {
+        console.error('Failed to fetch user:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  // Auto-detect current page from pathname
+  const getCurrentPage = () => {
+    if (currentPage) return currentPage;
+    
+    if (pathname.startsWith('/patients')) return 'patients';
+    if (pathname.startsWith('/prescriptions')) return 'prescriptions';
+    if (pathname.startsWith('/appointments')) return 'appointments';
+    if (pathname.startsWith('/records')) return 'records';
+    if (pathname.startsWith('/settings')) return 'settings';
+    if (pathname.startsWith('/dashboard')) return 'dashboard';
+    
+    return 'dashboard';
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Force redirect even if API call fails
+      router.push('/login');
+    }
+  };
+
+  const handleNavigation = (href: string) => {
+    router.push(href);
+    setIsMobileMenuOpen(false);
+  };
+
+  const getUserInitials = (fullName?: string) => {
+    if (!fullName) return '?';
+    const names = fullName.split(' ');
+    if (names.length >= 2) {
+      const first = names[0]?.[0] || '';
+      const second = names[1]?.[0] || '';
+      return (first + second).toUpperCase() || '?';
+    }
+    return fullName[0]?.toUpperCase() || '?';
+  };
+
+  const getUserDisplayName = (fullName?: string) => {
+    if (!fullName) return 'ユーザー';
+    const names = fullName.split(' ');
+    if (names.length >= 2) {
+      return `${names[0]} ${names[1]?.[0] || ''}医師`;
+    }
+    return fullName;
+  };
+
+  // Define all navigation items with permission requirements
+  const allNavigationItems = [
     {
       id: 'dashboard',
       label: 'ダッシュボード',
       icon: Activity,
       href: '/dashboard',
-      description: '概要とアクティビティ'
+      description: '概要とアクティビティ',
+      // Dashboard is accessible to all authenticated users
+      show: true
     },
     {
       id: 'patients',
       label: '患者管理',
       icon: Users,
       href: '/patients',
-      description: '患者情報の管理'
+      description: '患者情報の管理',
+      show: canAccessPatientData()
+    },
+    {
+      id: 'prescriptions',
+      label: '処方箋',
+      icon: FileText,
+      href: '/prescriptions',
+      description: '処方箋の作成・管理',
+      show: canAccessPrescriptions()
     },
     {
       id: 'appointments',
       label: '予約管理',
       icon: Calendar,
       href: '/appointments',
-      description: '診療予約とスケジュール'
+      description: '診療予約とスケジュール',
+      show: hasPermission(Permission.READ_APPOINTMENT)
     },
     {
       id: 'records',
       label: 'カルテ',
-      icon: FileText,
+      icon: Stethoscope,
       href: '/records',
-      description: '診療記録の管理'
+      description: '診療記録の管理',
+      show: canAccessMedicalRecords()
+    },
+    {
+      id: 'users',
+      label: 'ユーザー管理',
+      icon: Shield,
+      href: '/users',
+      description: 'ユーザーとアクセス権限の管理',
+      show: canManageUsers()
     },
     {
       id: 'settings',
       label: '設定',
       icon: Settings,
       href: '/settings',
-      description: 'システム設定'
+      description: 'システム設定',
+      show: canManageSettings() || isAdminStaff()
     }
   ];
+
+  // Filter navigation items based on permissions
+  const navigationItems = allNavigationItems.filter(item => item.show);
+
+  const currentPageId = getCurrentPage();
 
   return (
     <>
@@ -113,13 +230,13 @@ export function Navigation({ currentPage = 'dashboard' }: NavigationProps) {
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-1">
               {navigationItems.map((item) => {
-                const isActive = currentPage === item.id;
+                const isActive = currentPageId === item.id;
                 const Icon = item.icon;
                 
                 return (
-                  <motion.a
+                  <motion.button
                     key={item.id}
-                    href={item.href}
+                    onClick={() => handleNavigation(item.href)}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     className={`
@@ -141,7 +258,7 @@ export function Navigation({ currentPage = 'dashboard' }: NavigationProps) {
                         className="absolute bottom-0 left-0 right-0 h-0.5 bg-apple-blue rounded-full"
                       />
                     )}
-                  </motion.a>
+                  </motion.button>
                 );
               })}
             </div>
@@ -184,14 +301,19 @@ export function Navigation({ currentPage = 'dashboard' }: NavigationProps) {
                   variant="ghost"
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
                   className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/50"
+                  disabled={isLoading}
                 >
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-apple-blue to-apple-purple 
                                 flex items-center justify-center text-white font-medium text-sm">
-                    田
+                    {isLoading ? '...' : getUserInitials(user?.full_name)}
                   </div>
                   <div className="hidden sm:block text-left">
-                    <div className="text-sm font-medium text-system-gray-900">田中医師</div>
-                    <div className="text-xs text-system-gray-600">内科・主任</div>
+                    <div className="text-sm font-medium text-system-gray-900">
+                      {isLoading ? '読み込み中...' : getUserDisplayName(user?.full_name)}
+                    </div>
+                    <div className="text-xs text-system-gray-600">
+                      {isLoading ? '' : (user?.department || '医療従事者')}
+                    </div>
                   </div>
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
                     isProfileOpen ? 'rotate-180' : ''
@@ -212,37 +334,68 @@ export function Navigation({ currentPage = 'dashboard' }: NavigationProps) {
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-apple-blue to-apple-purple 
                                         flex items-center justify-center text-white font-medium">
-                            田
+                            {getUserInitials(user?.full_name)}
                           </div>
                           <div>
-                            <div className="font-medium text-system-gray-900">田中 太郎</div>
-                            <div className="text-sm text-system-gray-600">内科・主任医師</div>
+                            <div className="font-medium text-system-gray-900">
+                              {user?.full_name || 'ユーザー名なし'}
+                            </div>
+                            <div className="text-sm text-system-gray-600">
+                              {user?.department ? `${user.department}・${user.position || ''}` : '医療従事者'}
+                            </div>
                           </div>
                         </div>
                       </div>
                       
                       <div className="py-2">
-                        <div className="px-4 py-2 flex items-center gap-3 text-sm text-system-gray-600">
-                          <Shield className="w-4 h-4 text-medical-success" />
-                          <span>医師免許: 第123456号</span>
-                        </div>
+                        {user?.medical_license_number && (
+                          <div className="px-4 py-2 flex items-center gap-3 text-sm text-system-gray-600">
+                            <Shield className="w-4 h-4 text-medical-success" />
+                            <span>医師免許: {user.medical_license_number}</span>
+                          </div>
+                        )}
                         <div className="px-4 py-2 flex items-center gap-3 text-sm text-system-gray-600">
                           <Clock className="w-4 h-4 text-apple-blue" />
-                          <span>最終ログイン: 今日 8:30</span>
+                          <span>
+                            最終ログイン: {user?.last_login_at 
+                              ? new Date(user.last_login_at).toLocaleString('ja-JP', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : '情報なし'
+                            }
+                          </span>
                         </div>
                       </div>
 
                       <div className="border-t border-white/10 pt-2">
-                        <button className="w-full px-4 py-2 text-left text-sm text-system-gray-700 
-                                         hover:bg-white/50 transition-colors">
+                        <button 
+                          className="w-full px-4 py-2 text-left text-sm text-system-gray-700 
+                                   hover:bg-white/50 transition-colors"
+                          onClick={() => {
+                            setIsProfileOpen(false);
+                            handleNavigation('/profile');
+                          }}
+                        >
                           プロフィール設定
                         </button>
-                        <button className="w-full px-4 py-2 text-left text-sm text-system-gray-700 
-                                         hover:bg-white/50 transition-colors">
+                        <button 
+                          className="w-full px-4 py-2 text-left text-sm text-system-gray-700 
+                                   hover:bg-white/50 transition-colors"
+                          onClick={() => {
+                            setIsProfileOpen(false);
+                            handleNavigation('/security');
+                          }}
+                        >
                           セキュリティ設定
                         </button>
-                        <button className="w-full px-4 py-2 text-left text-sm text-medical-error 
-                                         hover:bg-medical-error/10 transition-colors flex items-center gap-2">
+                        <button 
+                          className="w-full px-4 py-2 text-left text-sm text-medical-error 
+                                   hover:bg-medical-error/10 transition-colors flex items-center gap-2"
+                          onClick={handleLogout}
+                        >
                           <LogOut className="w-4 h-4" />
                           ログアウト
                         </button>
@@ -304,17 +457,16 @@ export function Navigation({ currentPage = 'dashboard' }: NavigationProps) {
                 {/* Mobile Navigation Items */}
                 <div className="space-y-2">
                   {navigationItems.map((item) => {
-                    const isActive = currentPage === item.id;
+                    const isActive = currentPageId === item.id;
                     const Icon = item.icon;
                     
                     return (
-                      <motion.a
+                      <motion.button
                         key={item.id}
-                        href={item.href}
+                        onClick={() => handleNavigation(item.href)}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => setIsMobileMenuOpen(false)}
                         className={`
-                          block p-4 rounded-xl transition-all duration-200
+                          w-full text-left p-4 rounded-xl transition-all duration-200
                           ${isActive 
                             ? 'bg-apple-blue/10 text-apple-blue' 
                             : 'text-system-gray-700 hover:bg-white/50'
@@ -328,7 +480,7 @@ export function Navigation({ currentPage = 'dashboard' }: NavigationProps) {
                             <div className="text-sm opacity-70">{item.description}</div>
                           </div>
                         </div>
-                      </motion.a>
+                      </motion.button>
                     );
                   })}
                 </div>

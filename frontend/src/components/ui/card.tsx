@@ -2,28 +2,30 @@ import * as React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & {
-    hover?: boolean;
-    glass?: boolean;
-    elevated?: boolean;
-  }
->(({ className, hover = false, glass = true, elevated = false, ...props }, ref) => (
-  <motion.div
-    ref={ref}
+interface CardProps {
+  className?: string;
+  children?: React.ReactNode;
+  hover?: boolean;
+  glass?: boolean;
+  elevated?: boolean;
+  onClick?: () => void;
+  [key: string]: any;
+}
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, hover = false, glass = true, elevated = false, ...props }, ref) => (
+    <motion.div
+      ref={ref}
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-    whileHover={
-      hover
-        ? {
-            scale: 1.02,
-            y: -8,
-            transition: { duration: 0.2, ease: [0.25, 0.1, 0.25, 1] },
-          }
-        : undefined
-    }
+    {...(hover && {
+      whileHover: {
+        scale: 1.02,
+        y: -8,
+        transition: { duration: 0.2, ease: [0.25, 0.1, 0.25, 1] },
+      }
+    })}
     className={cn(
       // Base card styles with Apple-inspired design
       'rounded-2xl border transition-all duration-300',

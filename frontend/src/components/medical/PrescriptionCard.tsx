@@ -9,10 +9,10 @@ import {
   CalendarIcon, 
   UserIcon, 
   ClockIcon,
-  PillIcon,
   DocumentIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
+import { Pill } from 'lucide-react';
 
 interface PrescriptionCardProps {
   prescription: Prescription;
@@ -23,9 +23,9 @@ interface PrescriptionCardProps {
 const statusColors = {
   [PrescriptionStatus.DRAFT]: 'warning',
   [PrescriptionStatus.ACTIVE]: 'normal',
-  [PrescriptionStatus.COMPLETED]: 'normal',
-  [PrescriptionStatus.CANCELLED]: 'critical',
-  [PrescriptionStatus.EXPIRED]: 'critical'
+  [PrescriptionStatus.COMPLETED]: 'success',
+  [PrescriptionStatus.CANCELLED]: 'error',
+  [PrescriptionStatus.EXPIRED]: 'error'
 } as const;
 
 export function PrescriptionCard({ 
@@ -58,10 +58,9 @@ export function PrescriptionCard({
                 {new Date(prescription.prescribed_date).toLocaleDateString('ja-JP')}
               </div>
             </div>
-            <StatusBadge 
-              status={statusColors[prescription.status]} 
-              text={prescription.status}
-            />
+            <StatusBadge status={statusColors[prescription.status]}>
+              {prescription.status}
+            </StatusBadge>
           </div>
         </CardHeader>
 
@@ -95,7 +94,7 @@ export function PrescriptionCard({
 
           {/* Medication Count */}
           <div className="flex items-center gap-2 text-sm">
-            <PillIcon className="h-4 w-4 text-gray-500" />
+            <Pill className="h-4 w-4 text-gray-500" />
             <span className="text-gray-700">
               薬剤数: {prescription.items.length}品目
             </span>

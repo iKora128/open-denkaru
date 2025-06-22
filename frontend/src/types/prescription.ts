@@ -1,42 +1,46 @@
-export enum DosageUnit {
-  MG = "mg",
-  G = "g",
-  ML = "ml",
-  L = "l",
-  TABLET = "錠",
-  CAPSULE = "カプセル",
-  PACKET = "包",
-  BOTTLE = "本",
-  TUBE = "管",
-  SHEET = "シート"
-}
+export const DosageUnit = {
+  MG: "mg",
+  G: "g",
+  ML: "ml",
+  L: "l",
+  TABLET: "錠",
+  CAPSULE: "カプセル",
+  PACKET: "包",
+  BOTTLE: "本",
+  TUBE: "管",
+  SHEET: "シート"
+} as const;
 
-export enum DosageFrequency {
-  ONCE_DAILY = "1日1回",
-  TWICE_DAILY = "1日2回", 
-  THREE_TIMES_DAILY = "1日3回",
-  FOUR_TIMES_DAILY = "1日4回",
-  AS_NEEDED = "頓服",
-  BEFORE_MEALS = "食前",
-  AFTER_MEALS = "食後",
-  BETWEEN_MEALS = "食間",
-  BEDTIME = "就寝前"
-}
+export const DosageFrequency = {
+  ONCE_DAILY: "1日1回",
+  TWICE_DAILY: "1日2回", 
+  THREE_TIMES_DAILY: "1日3回",
+  FOUR_TIMES_DAILY: "1日4回",
+  AS_NEEDED: "頓服",
+  BEFORE_MEALS: "食前",
+  AFTER_MEALS: "食後",
+  BETWEEN_MEALS: "食間",
+  BEDTIME: "就寝前"
+} as const;
 
-export enum PrescriptionStatus {
-  DRAFT = "下書き",
-  ACTIVE = "有効",
-  COMPLETED = "完了",
-  CANCELLED = "取消",
-  EXPIRED = "期限切れ"
-}
+export const PrescriptionStatus = {
+  DRAFT: "下書き",
+  ACTIVE: "有効",
+  COMPLETED: "完了",
+  CANCELLED: "取消",
+  EXPIRED: "期限切れ"
+} as const;
+
+export type DosageUnitType = typeof DosageUnit[keyof typeof DosageUnit];
+export type DosageFrequencyType = typeof DosageFrequency[keyof typeof DosageFrequency];
+export type PrescriptionStatusType = typeof PrescriptionStatus[keyof typeof PrescriptionStatus];
 
 export interface Medication {
   id: number;
   name: string;
   generic_name?: string;
   code?: string;
-  unit: DosageUnit;
+  unit: DosageUnitType;
   manufacturer?: string;
   contraindications?: string;
   side_effects?: string;
@@ -50,8 +54,8 @@ export interface PrescriptionItem {
   medication_id: number;
   medication: Medication;
   dosage: number;
-  dosage_unit: DosageUnit;
-  frequency: DosageFrequency;
+  dosage_unit: DosageUnitType;
+  frequency: DosageFrequencyType;
   duration_days: number;
   total_amount: number;
   instructions?: string;
@@ -62,7 +66,7 @@ export interface Prescription {
   patient_id: string;
   prescribed_date: string;
   valid_until: string;
-  status: PrescriptionStatus;
+  status: PrescriptionStatusType;
   clinical_info?: string;
   diagnosis?: string;
   notes?: string;
@@ -77,7 +81,7 @@ export interface PrescriptionCreate {
   patient_id: string;
   prescribed_date: string;
   valid_until: string;
-  status?: PrescriptionStatus;
+  status?: PrescriptionStatusType;
   clinical_info?: string;
   diagnosis?: string;
   notes?: string;
@@ -89,8 +93,8 @@ export interface PrescriptionCreate {
 export interface PrescriptionItemCreate {
   medication_id: number;
   dosage: number;
-  dosage_unit: DosageUnit;
-  frequency: DosageFrequency;
+  dosage_unit: DosageUnitType;
+  frequency: DosageFrequencyType;
   duration_days: number;
   total_amount: number;
   instructions?: string;
@@ -144,8 +148,8 @@ export interface PrescriptionFormOutput {
     name: string;
     generic_name?: string;
     dosage: number;
-    dosage_unit: DosageUnit;
-    frequency: DosageFrequency;
+    dosage_unit: DosageUnitType;
+    frequency: DosageFrequencyType;
     duration_days: number;
     total_amount: number;
     instructions?: string;

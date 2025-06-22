@@ -1,0 +1,413 @@
+# Docker Compose for Medical EMR Backup and Monitoring System
+# Comprehensive backup infrastructure with medical-grade reliability
+
+version: '3.8'
+
+services:
+  # ==================================================
+  # PRIMARY DATABASE
+  # ==================================================
+  postgres-primary:
+    image: postgres:15-alpine
+    container_name: medical-emr-primary
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: medical_emr
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secure_medical_password_2025
+      POSTGRES_REPLICATION_USER: replicator
+      POSTGRES_REPLICATION_PASSWORD: replication_secure_password_2025
+    volumes:
+      - postgres_primary_data:/var/lib/postgresql/data
+      - ./database:/docker-entrypoint-initdb.d
+      - ./config/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./scripts:/scripts
+    command: |
+      postgres 
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c wal_level=replica 
+      -c max_wal_senders=3 
+      -c checkpoint_timeout=5min
+      -c archive_mode=on
+      -c archive_command='/scripts/archive-wal.sh %f %p'
+    ports:
+      - "5432:5432"
+    networks:
+      - medical_emr_backup
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d medical_emr"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ==================================================
+  # REPLICA DATABASES
+  # ==================================================
+  postgres-replica-01:
+    image: postgres:15-alpine
+    container_name: medical-emr-replica-01
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secure_medical_password_2025
+      PGUSER: postgres
+    volumes:
+      - postgres_replica_01_data:/var/lib/postgresql/data
+      - ./scripts:/scripts
+    command: |
+      bash -c "
+      until pg_basebackup -h postgres-primary -D /var/lib/postgresql/data -U replicator -v -P -W; do
+        echo 'Waiting for primary database...'
+        sleep 5
+      done
+      echo 'standby_mode = on' >> /var/lib/postgresql/data/recovery.conf
+      echo 'primary_conninfo = host=postgres-primary port=5432 user=replicator' >> /var/lib/postgresql/data/recovery.conf
+      postgres"
+    depends_on:
+      - postgres-primary
+    ports:
+      - "5433:5432"
+    networks:
+      - medical_emr_backup
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  postgres-replica-02:
+    image: postgres:15-alpine
+    container_name: medical-emr-replica-02
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secure_medical_password_2025
+      PGUSER: postgres
+    volumes:
+      - postgres_replica_02_data:/var/lib/postgresql/data
+      - ./scripts:/scripts
+    command: |
+      bash -c "
+      until pg_basebackup -h postgres-primary -D /var/lib/postgresql/data -U replicator -v -P -W; do
+        echo 'Waiting for primary database...'
+        sleep 5
+      done
+      echo 'standby_mode = on' >> /var/lib/postgresql/data/recovery.conf
+      echo 'primary_conninfo = host=postgres-primary port=5432 user=replicator' >> /var/lib/postgresql/data/recovery.conf
+      postgres"
+    depends_on:
+      - postgres-primary
+    ports:
+      - "5434:5432"
+    networks:
+      - medical_emr_backup
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================================================
+  # BACKUP SERVICE
+  # ==================================================
+  backup-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backup
+    container_name: medical-emr-backup
+    restart: unless-stopped
+    environment:
+      - ENVIRONMENT=production
+      - DB_HOST=postgres-primary
+      - DB_PORT=5432
+      - DB_NAME=medical_emr
+      - DB_USER=postgres
+      - PGPASSWORD=secure_medical_password_2025
+    volumes:
+      - backup_data:/var/backups/medical_emr
+      - backup_staging:/tmp/backup_staging
+      - wal_archive:/var/backups/medical_emr/wal
+      - ./config/backup.conf:/etc/medical_emr/backup.conf
+      - ./scripts:/scripts
+      - backup_keys:/etc/medical_emr/keys
+      - ./logs:/var/log/medical_emr
+    depends_on:
+      - postgres-primary
+      - redis
+    networks:
+      - medical_emr_backup
+    command: |
+      bash -c "
+      # Generate encryption key if not exists
+      if [ ! -f /etc/medical_emr/keys/backup.key ]; then
+        mkdir -p /etc/medical_emr/keys
+        openssl rand -base64 32 > /etc/medical_emr/keys/backup.key
+        chmod 600 /etc/medical_emr/keys/backup.key
+      fi
+      
+      # Install cron for scheduled backups
+      echo '0 2 * * * /scripts/backup-automation.sh full --verify' > /etc/crontab
+      echo '0 */4 * * * /scripts/backup-automation.sh wal' >> /etc/crontab
+      echo '0 3 * * 0 /scripts/backup-automation.sh verify' >> /etc/crontab
+      
+      # Start cron daemon
+      crond -f
+      "
+
+  # ==================================================
+  # REDIS FOR CACHING AND COORDINATION
+  # ==================================================
+  redis:
+    image: redis:7-alpine
+    container_name: medical-emr-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass redis_secure_password_2025
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - medical_emr_backup
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================================================
+  # MONITORING STACK
+  # ==================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: medical-emr-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - medical_emr_backup
+    depends_on:
+      - postgres-exporter
+      - backup-exporter
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: medical-emr-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: medical_admin_password_2025
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_USERS_ALLOW_ORG_CREATE: 'false'
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    ports:
+      - "3001:3000"
+    networks:
+      - medical_emr_backup
+    depends_on:
+      - prometheus
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: medical-emr-alertmanager
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/config.yml
+      - alertmanager_data:/alertmanager
+    ports:
+      - "9093:9093"
+    networks:
+      - medical_emr_backup
+
+  # ==================================================
+  # EXPORTERS FOR MONITORING
+  # ==================================================
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: medical-emr-postgres-exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: postgresql://postgres:secure_medical_password_2025@postgres-primary:5432/medical_emr?sslmode=disable
+    ports:
+      - "9187:9187"
+    networks:
+      - medical_emr_backup
+    depends_on:
+      - postgres-primary
+
+  backup-exporter:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backup-exporter
+    container_name: medical-emr-backup-exporter
+    restart: unless-stopped
+    environment:
+      - DB_HOST=postgres-primary
+      - DB_PORT=5432
+      - DB_NAME=medical_emr
+      - DB_USER=postgres
+      - PGPASSWORD=secure_medical_password_2025
+    volumes:
+      - backup_data:/var/backups/medical_emr:ro
+    ports:
+      - "9188:9188"
+    networks:
+      - medical_emr_backup
+    depends_on:
+      - postgres-primary
+
+  # ==================================================
+  # LOG AGGREGATION
+  # ==================================================
+  loki:
+    image: grafana/loki:latest
+    container_name: medical-emr-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
+      - ./monitoring/loki-config.yaml:/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    networks:
+      - medical_emr_backup
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: medical-emr-promtail
+    restart: unless-stopped
+    volumes:
+      - ./logs:/var/log/medical_emr:ro
+      - ./monitoring/promtail-config.yaml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - medical_emr_backup
+    depends_on:
+      - loki
+
+  # ==================================================
+  # BACKUP VERIFICATION SERVICE
+  # ==================================================
+  backup-verifier:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backup-verifier
+    container_name: medical-emr-backup-verifier
+    restart: unless-stopped
+    environment:
+      - VERIFICATION_SCHEDULE=0 4 * * 0  # Weekly verification
+      - DB_HOST=postgres-primary
+      - DB_PORT=5432
+      - DB_NAME=medical_emr
+      - DB_USER=postgres
+      - PGPASSWORD=secure_medical_password_2025
+    volumes:
+      - backup_data:/var/backups/medical_emr:ro
+      - backup_verification:/var/backup_verification
+      - ./scripts:/scripts
+      - backup_keys:/etc/medical_emr/keys:ro
+    networks:
+      - medical_emr_backup
+    depends_on:
+      - postgres-primary
+
+  # ==================================================
+  # DISASTER RECOVERY COORDINATOR
+  # ==================================================
+  dr-coordinator:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dr-coordinator
+    container_name: medical-emr-dr-coordinator
+    restart: unless-stopped
+    environment:
+      - PRIMARY_HOST=postgres-primary
+      - REPLICA_HOSTS=postgres-replica-01,postgres-replica-02
+      - DR_SITE_HOST=dr.medical-emr.local
+      - HEALTH_CHECK_INTERVAL=60
+    volumes:
+      - ./scripts:/scripts
+      - ./config:/config
+      - dr_data:/var/dr_data
+    ports:
+      - "8080:8080"  # DR status dashboard
+    networks:
+      - medical_emr_backup
+    depends_on:
+      - postgres-primary
+      - postgres-replica-01
+      - postgres-replica-02
+
+# ==================================================
+# VOLUMES
+# ==================================================
+volumes:
+  postgres_primary_data:
+    name: medical_emr_primary_data
+  postgres_replica_01_data:
+    name: medical_emr_replica_01_data
+  postgres_replica_02_data:
+    name: medical_emr_replica_02_data
+  backup_data:
+    name: medical_emr_backup_data
+  backup_staging:
+    name: medical_emr_backup_staging
+  wal_archive:
+    name: medical_emr_wal_archive
+  backup_keys:
+    name: medical_emr_backup_keys
+  backup_verification:
+    name: medical_emr_backup_verification
+  redis_data:
+    name: medical_emr_redis_data
+  prometheus_data:
+    name: medical_emr_prometheus_data
+  grafana_data:
+    name: medical_emr_grafana_data
+  alertmanager_data:
+    name: medical_emr_alertmanager_data
+  loki_data:
+    name: medical_emr_loki_data
+  dr_data:
+    name: medical_emr_dr_data
+
+# ==================================================
+# NETWORKS
+# ==================================================
+networks:
+  medical_emr_backup:
+    name: medical_emr_backup
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+
+# ==================================================
+# SECRETS (for production use)
+# ==================================================
+secrets:
+  postgres_password:
+    external: true
+  backup_encryption_key:
+    external: true
+  monitoring_admin_password:
+    external: true

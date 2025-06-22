@@ -11,12 +11,10 @@ import {
   DocumentTextIcon,
   UserIcon,
   HeartIcon,
-  ClipboardDocumentListIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
   SparklesIcon,
-  CalendarIcon,
-  PlayIcon
+  CalendarIcon
 } from '@heroicons/react/24/outline';
 
 interface SOAPRecordFormProps {
@@ -37,7 +35,7 @@ export function SOAPRecordForm({
     objective: '',
     assessment: '',
     plan: '',
-    visit_date: new Date().toISOString().split('T')[0],
+    visit_date: new Date().toISOString().split('T')[0] || '',
     visit_type: 'follow_up',
     chief_complaint: '',
     vital_signs: {},
@@ -90,7 +88,7 @@ export function SOAPRecordForm({
     const record: MedicalRecordCreate = {
       patient_id: patient.id,
       ...formData,
-      vital_signs: Object.keys(vitalSigns).length > 0 ? vitalSigns : undefined
+      vital_signs: Object.keys(vitalSigns).length > 0 ? vitalSigns : {}
     };
     
     onSubmit(record);

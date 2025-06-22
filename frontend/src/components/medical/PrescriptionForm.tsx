@@ -43,8 +43,8 @@ export function PrescriptionForm({
 }: PrescriptionFormProps) {
   const [formData, setFormData] = useState<Omit<PrescriptionCreate, 'items'>>({
     patient_id: patient.id,
-    prescribed_date: new Date().toISOString().split('T')[0],
-    valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+    prescribed_date: new Date().toISOString().split('T')[0] || '',
+    valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] || '', // 30 days from now
     prescribed_by: '',
     diagnosis: '',
     clinical_info: '',
@@ -156,7 +156,7 @@ export function PrescriptionForm({
         frequency: item.frequency,
         duration_days: item.duration_days,
         total_amount: item.total_amount,
-        instructions: item.instructions
+        instructions: item.instructions || ''
       }))
     };
     
@@ -331,7 +331,7 @@ export function PrescriptionForm({
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => updateMedicationItem(item.id, { medication_id: 0, medication: undefined })}
+                          onClick={() => updateMedicationItem(item.id, { medication_id: 0 })}
                           className="ml-auto text-gray-500"
                         >
                           変更
@@ -350,8 +350,8 @@ export function PrescriptionForm({
                           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                             {medications
                               .filter(med => 
-                                med.name.toLowerCase().includes(medicationSearch[item.id].toLowerCase()) ||
-                                (med.generic_name && med.generic_name.toLowerCase().includes(medicationSearch[item.id].toLowerCase()))
+                                med.name.toLowerCase().includes(medicationSearch[item.id]?.toLowerCase() || '') ||
+                                (med.generic_name && med.generic_name.toLowerCase().includes(medicationSearch[item.id]?.toLowerCase() || ''))
                               )
                               .slice(0, 10)
                               .map(medication => (
@@ -395,7 +395,7 @@ export function PrescriptionForm({
                       <select
                         className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         value={item.dosage_unit}
-                        onChange={(e) => updateMedicationItem(item.id, { dosage_unit: e.target.value as DosageUnit })}
+                        onChange={(e) => updateMedicationItem(item.id, { dosage_unit: e.target.value as typeof DosageUnit[keyof typeof DosageUnit] })}
                       >
                         {Object.values(DosageUnit).map(unit => (
                           <option key={unit} value={unit}>{unit}</option>
@@ -408,7 +408,7 @@ export function PrescriptionForm({
                       <select
                         className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         value={item.frequency}
-                        onChange={(e) => updateMedicationItem(item.id, { frequency: e.target.value as DosageFrequency })}
+                        onChange={(e) => updateMedicationItem(item.id, { frequency: e.target.value as typeof DosageFrequency[keyof typeof DosageFrequency] })}
                       >
                         {Object.values(DosageFrequency).map(freq => (
                           <option key={freq} value={freq}>{freq}</option>

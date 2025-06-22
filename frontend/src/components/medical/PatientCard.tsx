@@ -9,6 +9,7 @@ import type { Patient } from '@/types/patient';
 interface PatientCardProps {
   patient: Patient;
   onClick?: (patient: Patient) => void;
+  variant?: 'vertical' | 'horizontal';
 }
 
 export function PatientCard({ patient, onClick }: PatientCardProps) {
@@ -23,15 +24,7 @@ export function PatientCard({ patient, onClick }: PatientCardProps) {
     }
   };
 
-  const getBloodTypeColor = (bloodType?: string) => {
-    if (!bloodType || bloodType === 'unknown') return 'text-gray-400';
-    return 'text-medical-error';
-  };
 
-  const formatBloodType = (bloodType?: string) => {
-    if (!bloodType || bloodType === 'unknown') return '';
-    return bloodType.replace('_POSITIVE', '+').replace('_NEGATIVE', '-');
-  };
 
   return (
     <motion.div
@@ -233,7 +226,6 @@ export function PatientCard({ patient, onClick }: PatientCardProps) {
                 </motion.div>
               </div>
             </div>
-          </div>
           </div>
         </CardContent>
       </Card>

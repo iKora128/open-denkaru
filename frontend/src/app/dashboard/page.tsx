@@ -23,25 +23,40 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, VitalCard } from '@/components/ui/card';
 import { PatientCard } from '@/components/medical/PatientCard';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 import { animations } from '@/lib/utils';
+import { medicalApi, devUtils } from '@/lib/api';
 import type { Patient } from '@/types/patient';
+import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch patients from API
+  // Fetch patients from API using proper API client
   useEffect(() => {
     const fetchPatients = async () => {
       try {
-        const response = await fetch('http://localhost:8001/api/v1/patients/');
-        if (response.ok) {
-          const data = await response.json();
-          setPatients(data);
+        // Log API configuration in development
+        devUtils.logConfig();
+        
+        // Test API connection first
+        const isConnected = await devUtils.testConnection();
+        if (!isConnected) {
+          console.warn('⚠️ API connection failed, using demo data');
+          setPatients([]);
+          return;
         }
+
+        // Fetch patients data
+        const data = await medicalApi.patients.list();
+        setPatients(data || []);
       } catch (error) {
         console.error('Failed to fetch patients:', error);
+        // In case of error, set empty array instead of crashing
+        setPatients([]);
       } finally {
         setIsLoading(false);
       }
@@ -50,15 +65,46 @@ export default function DashboardPage() {
     fetchPatients();
   }, []);
 
+  // Navigation functions
+  const handleNewPatient = () => {
+    router.push('/patients/new');
+  };
+
+  const handleViewPatients = () => {
+    router.push('/patients');
+  };
+
+  const handlePatientClick = (patient: Patient) => {
+    router.push(`/patients/${patient.id}`);
+  };
+
+
+  const handleAppointments = () => {
+    router.push('/appointments');
+  };
+
+  const handleReports = () => {
+    router.push('/reports');
+  };
+
+  const handleViewActivity = () => {
+    router.push('/activity');
+  };
+
+  const handleViewAlerts = () => {
+    router.push('/alerts');
+  };
+
   // Filter patients based on search query
-  const filteredPatients = patients.filter(patient =>
-    patient.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    patient.patient_number.includes(searchQuery) ||
-    (patient.full_name_kana && patient.full_name_kana.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredPatients = patients.filter((patient) => {
+    return patient.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           patient.patient_number.includes(searchQuery) ||
+           (patient.full_name_kana && patient.full_name_kana.toLowerCase().includes(searchQuery.toLowerCase()));
+  });
 
   return (
-    <div className="min-h-screen">
+    <AuthGuard>
+      <div className="min-h-screen">
       {/* Enhanced Header Section */}
       <div className="bg-gradient-to-r from-apple-blue/5 via-white to-apple-purple/5 border-b border-system-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-8">
@@ -113,6 +159,7 @@ export default function DashboardPage() {
                 size="lg" 
                 leftIcon={<Plus className="w-5 h-5" />}
                 className="whitespace-nowrap"
+                onClick={handleNewPatient}
               >
                 新規患者登録
               </Button>
@@ -171,7 +218,7 @@ export default function DashboardPage() {
                     <p className="text-sm text-system-gray-600">2件の緊急アラートがあります</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={handleViewAlerts}>
                   詳細を確認
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
@@ -208,7 +255,7 @@ export default function DashboardPage() {
                       </p>
                     </div>
                   </CardTitle>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={handleAppointments}>
                     全て表示
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
@@ -314,25 +361,25 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 p-6">
-                <Button variant="secondary" className="w-full justify-start h-12" leftIcon={<Users className="w-5 h-5" />}>
+                <Button variant="secondary" className="w-full justify-start h-12" leftIcon={<Users className="w-5 h-5" />} onClick={handleViewPatients}>
                   <div className="text-left">
                     <div className="font-medium">患者一覧</div>
                     <div className="text-xs opacity-70">患者情報の確認・編集</div>
                   </div>
                 </Button>
-                <Button variant="secondary" className="w-full justify-start h-12" leftIcon={<Plus className="w-5 h-5" />}>
+                <Button variant="secondary" className="w-full justify-start h-12" leftIcon={<Plus className="w-5 h-5" />} onClick={handleNewPatient}>
                   <div className="text-left">
                     <div className="font-medium">新規カルテ</div>
                     <div className="text-xs opacity-70">診療記録の作成</div>
                   </div>
                 </Button>
-                <Button variant="secondary" className="w-full justify-start h-12" leftIcon={<Calendar className="w-5 h-5" />}>
+                <Button variant="secondary" className="w-full justify-start h-12" leftIcon={<Calendar className="w-5 h-5" />} onClick={handleAppointments}>
                   <div className="text-left">
                     <div className="font-medium">予約管理</div>
                     <div className="text-xs opacity-70">スケジュール調整</div>
                   </div>
                 </Button>
-                <Button variant="secondary" className="w-full justify-start h-12" leftIcon={<TrendingUp className="w-5 h-5" />}>
+                <Button variant="secondary" className="w-full justify-start h-12" leftIcon={<TrendingUp className="w-5 h-5" />} onClick={handleReports}>
                   <div className="text-left">
                     <div className="font-medium">統計レポート</div>
                     <div className="text-xs opacity-70">診療データ分析</div>
@@ -399,7 +446,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
                 <div className="p-4 border-t border-system-gray-100">
-                  <Button variant="ghost" className="w-full text-sm" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                  <Button variant="ghost" className="w-full text-sm" rightIcon={<ArrowRight className="w-4 h-4" />} onClick={handleViewActivity}>
                     全てのアクティビティを表示
                   </Button>
                 </div>
@@ -445,9 +492,7 @@ export default function DashboardPage() {
                   >
                     <PatientCard
                       patient={patient}
-                      onClick={(patient) => {
-                        console.log('Patient clicked:', patient);
-                      }}
+                      onClick={handlePatientClick}
                     />
                   </motion.div>
                 ))}
@@ -468,7 +513,7 @@ export default function DashboardPage() {
               <p className="text-gray-600 mb-6">
                 検索条件に一致する患者がいません。
               </p>
-              <Button>
+              <Button onClick={handleNewPatient}>
                 <Plus className="h-5 w-5 mr-2" />
                 新規患者登録
               </Button>
@@ -506,6 +551,6 @@ export default function DashboardPage() {
           </div>
         </motion.div>
       </div>
-    </div>
+    </AuthGuard>
   );
 }
