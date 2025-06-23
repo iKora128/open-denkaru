@@ -29,8 +29,6 @@ export function PermissionGate({
   className,
 }: PermissionGateProps) {
   const {
-    hasPermission,
-    hasRole,
     hasAnyPermission,
     hasAllPermissions,
     hasAnyRole,

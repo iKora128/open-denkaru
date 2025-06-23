@@ -24,7 +24,7 @@ import { authService } from '@/lib/auth';
 import type { CurrentUser } from '@/lib/api';
 import { useRouter, usePathname } from 'next/navigation';
 import { usePermissions } from '@/hooks/usePermissions';
-import { Permission, UserRole } from '@/types/user';
+import { Permission } from '@/types/user';
 
 interface NavigationProps {
   currentPage?: string;
@@ -42,15 +42,12 @@ export function Navigation({ currentPage }: NavigationProps) {
   // Use permissions hook for role-based navigation
   const {
     hasPermission,
-    hasRole,
-    isMedicalStaff,
     isAdminStaff,
     canAccessPatientData,
     canAccessPrescriptions,
     canAccessMedicalRecords,
     canManageUsers,
-    canManageSettings,
-    getUserInfo
+    canManageSettings
   } = usePermissions();
 
   // Get current user information

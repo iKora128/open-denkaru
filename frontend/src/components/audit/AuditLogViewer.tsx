@@ -45,13 +45,10 @@ export function AuditLogViewer({
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [stats, setStats] = useState<AuditStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [totalLogs, setTotalLogs] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [autoRefresh] = useState(false);
   
   // フィルター状態
   const [filter, setFilter] = useState<AuditLogFilter>({
@@ -68,41 +65,10 @@ export function AuditLogViewer({
   const [userFilter, setUserFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<'success' | 'failure' | 'warning' | ''>('');
 
-  // Check if user has permission to view audit logs
-  if (permissionsLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="flex items-center gap-3">
-          <RefreshCw className="w-6 h-6 animate-spin text-apple-blue" />
-          <span className="text-lg">権限確認中...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!hasPermission(Permission.VIEW_AUDIT_LOGS)) {
-    return (
-      <div className="glass-card p-8 text-center">
-        <AlertTriangle className="w-16 h-16 text-medical-warning mx-auto mb-4" />
-        <h2 className="text-xl font-semibold text-system-gray-900 mb-2">
-          アクセス権限がありません
-        </h2>
-        <p className="text-system-gray-600">
-          監査ログを閲覧する権限がありません。管理者にお問い合わせください。
-        </p>
-      </div>
-    );
-  }
-
-  // データ取得
-  useEffect(() => {
-    fetchAuditData();
-  }, [filter]);
-
+  // fetchAuditData function
   const fetchAuditData = async () => {
     try {
       setIsLoading(true);
-      setError(null);
 
       // Prepare filter with current search parameters
       const searchFilter: AuditLogFilter = {
@@ -120,8 +86,6 @@ export function AuditLogViewer({
         // Try to fetch from actual API
         const response = await auditService.getLogs(searchFilter);
         setLogs(response.logs);
-        setTotalLogs(response.total);
-        setTotalPages(response.totalPages);
 
         if (showStats) {
           const statsData = await auditService.getStats(
@@ -262,30 +226,40 @@ export function AuditLogViewer({
         }
 
         setLogs(filteredLogs);
-        setTotalLogs(filteredLogs.length);
-        setTotalPages(Math.ceil(filteredLogs.length / pageSize));
 
         if (showStats) {
           setStats(mockStats);
         }
       }
     } catch (err: any) {
-      setError(err.message || '監査ログの取得に失敗しました');
+      console.error('Failed to fetch audit data:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // データ取得
+  useEffect(() => {
+    if (!permissionsLoading) {
+      fetchAuditData();
+    }
+  }, [filter, permissionsLoading, searchQuery, actionFilter, severityFilter, userFilter, statusFilter, dateFrom, dateTo, showStats]);
+
+
   // Auto-refresh functionality
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (autoRefresh) {
-      interval = setInterval(fetchAuditData, 30000); // Refresh every 30 seconds
+      interval = setInterval(() => {
+        if (!permissionsLoading) {
+          fetchAuditData();
+        }
+      }, 30000); // Refresh every 30 seconds
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [autoRefresh, filter]);
+  }, [autoRefresh, permissionsLoading]);
 
   const handleSearch = () => {
     fetchAuditData();
@@ -302,9 +276,6 @@ export function AuditLogViewer({
     setFilter({ page: 1, limit: pageSize });
   };
 
-  const handlePageChange = (newPage: number) => {
-    setFilter({ ...filter, page: newPage });
-  };
 
   const getSeverityColor = (severity: AuditSeverity) => {
     switch (severity) {
@@ -487,19 +458,35 @@ export function AuditLogViewer({
       }
     } catch (error) {
       console.error('Failed to export logs:', error);
-      setError('エクスポートに失敗しました: ' + (error as Error).message);
     } finally {
       setIsExporting(false);
     }
   };
 
-  if (isLoading) {
+  // Permission check and loading states
+  if (permissionsLoading || isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="flex items-center gap-3">
           <RefreshCw className="w-6 h-6 animate-spin text-apple-blue" />
-          <span className="text-lg">監査ログを読み込み中...</span>
+          <span className="text-lg">
+            {permissionsLoading ? '権限確認中...' : '監査ログを読み込み中...'}
+          </span>
         </div>
+      </div>
+    );
+  }
+
+  if (!hasPermission(Permission.VIEW_AUDIT_LOGS)) {
+    return (
+      <div className="glass-card p-8 text-center">
+        <AlertTriangle className="w-16 h-16 text-medical-warning mx-auto mb-4" />
+        <h2 className="text-xl font-semibold text-system-gray-900 mb-2">
+          アクセス権限がありません
+        </h2>
+        <p className="text-system-gray-600">
+          監査ログを閲覧する権限がありません。管理者にお問い合わせください。
+        </p>
       </div>
     );
   }
@@ -643,8 +630,14 @@ export function AuditLogViewer({
                 <Button onClick={handleReset} variant="outline" size="sm">
                   リセット
                 </Button>
-                <Button onClick={exportLogs} variant="outline" size="sm">
+                <Button 
+                  onClick={() => exportLogs('csv')} 
+                  variant="outline" 
+                  size="sm"
+                  disabled={isExporting}
+                >
                   <Download className="w-4 h-4" />
+                  {isExporting ? 'エクスポート中...' : 'エクスポート'}
                 </Button>
               </div>
             </div>
