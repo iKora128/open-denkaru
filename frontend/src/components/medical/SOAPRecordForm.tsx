@@ -140,7 +140,7 @@ export function SOAPRecordForm({
           <div className="flex items-center gap-4 text-sm text-gray-600">
             <div className="flex items-center gap-1">
               <UserIcon className="h-4 w-4" />
-              {patient.full_name} ({patient.patient_number})
+              {patient.full_name || `${patient.family_name || ''} ${patient.given_name || ''}`.trim()} ({patient.patient_number})
             </div>
             <div className="flex items-center gap-1">
               <CalendarIcon className="h-4 w-4" />

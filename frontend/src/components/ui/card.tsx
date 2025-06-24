@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { motion } from 'framer-motion';
+// import { motion } from 'framer-motion'; // Removed for performance
 import { cn } from '@/lib/utils';
 
 interface CardProps {
@@ -14,21 +14,11 @@ interface CardProps {
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, hover = false, glass = true, elevated = false, ...props }, ref) => (
-    <motion.div
+    <div
       ref={ref}
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-    {...(hover && {
-      whileHover: {
-        scale: 1.02,
-        y: -8,
-        transition: { duration: 0.2, ease: [0.25, 0.1, 0.25, 1] },
-      }
-    })}
-    className={cn(
+      className={cn(
       // Base card styles with Apple-inspired design
-      'rounded-2xl border transition-all duration-300',
+      'rounded-2xl border transition-all duration-75',
       
       // Glass morphism effect
       glass && [
@@ -196,10 +186,7 @@ const VitalCard = React.forwardRef<
     {...props}
   >
     <CardContent className="pb-6">
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.2, duration: 0.3 }}
+      <div
         className={cn(
           'vitals-value text-4xl font-bold mb-2',
           status === 'critical' && 'text-medical-error',
@@ -209,7 +196,7 @@ const VitalCard = React.forwardRef<
       >
         {value}
         {unit && <span className="text-lg ml-1 opacity-70">{unit}</span>}
-      </motion.div>
+      </div>
       
       <div className="vitals-label text-sm text-system-gray-600 dark:text-system-gray-400">
         {label}
@@ -217,10 +204,7 @@ const VitalCard = React.forwardRef<
       
       {/* Trend indicator */}
       {trend && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
+        <div
           className={cn(
             'mt-2 inline-flex items-center text-xs',
             trend === 'up' && 'text-medical-success',
@@ -231,7 +215,7 @@ const VitalCard = React.forwardRef<
           {trend === 'up' && '↗'}
           {trend === 'down' && '↘'}
           {trend === 'stable' && '→'}
-        </motion.div>
+        </div>
       )}
     </CardContent>
     

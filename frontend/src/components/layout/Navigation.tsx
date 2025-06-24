@@ -66,6 +66,20 @@ export function Navigation({ currentPage }: NavigationProps) {
     fetchUser();
   }, []);
 
+  // Handle body scroll lock when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.classList.add('nav-open');
+    } else {
+      document.body.classList.remove('nav-open');
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('nav-open');
+    };
+  }, [isMobileMenuOpen]);
+
   // Auto-detect current page from pathname
   const getCurrentPage = () => {
     if (currentPage) return currentPage;
@@ -94,6 +108,8 @@ export function Navigation({ currentPage }: NavigationProps) {
   const handleNavigation = (href: string) => {
     router.push(href);
     setIsMobileMenuOpen(false);
+    // Ensure body scroll is re-enabled
+    document.body.classList.remove('nav-open');
   };
 
   const getUserInitials = (fullName?: string) => {
@@ -189,10 +205,16 @@ export function Navigation({ currentPage }: NavigationProps) {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-white/10"
+        className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-white/10 backdrop-blur-lg"
+        style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
+        }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-16 min-h-[64px]">
             
             {/* Logo and Brand */}
             <div className="flex items-center gap-4">
@@ -325,7 +347,12 @@ export function Navigation({ currentPage }: NavigationProps) {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute right-0 top-full mt-2 w-64 glass-card rounded-xl shadow-xl border border-white/10 py-2"
+                      className="absolute right-0 top-full mt-2 w-64 glass-card rounded-xl shadow-xl border border-white/10 py-2 z-50"
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                        backdropFilter: 'blur(24px) saturate(180%)',
+                        WebkitBackdropFilter: 'blur(24px) saturate(180%)'
+                      }}
                     >
                       <div className="px-4 py-3 border-b border-white/10">
                         <div className="flex items-center gap-3">
@@ -414,6 +441,7 @@ export function Navigation({ currentPage }: NavigationProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-40 md:hidden"
+            style={{ top: '64px' }}
           >
             {/* Backdrop */}
             <div 
@@ -428,6 +456,11 @@ export function Navigation({ currentPage }: NavigationProps) {
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 20, stiffness: 300 }}
               className="absolute left-0 top-0 bottom-0 w-80 glass-card border-r border-white/10 p-4"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                backdropFilter: 'blur(24px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(180%)'
+              }}
             >
               <div className="space-y-4">
                 <div className="flex items-center gap-3 pb-4 border-b border-white/10">
@@ -491,6 +524,7 @@ export function Navigation({ currentPage }: NavigationProps) {
       {isProfileOpen && (
         <div 
           className="fixed inset-0 z-30"
+          style={{ top: '64px' }}
           onClick={() => setIsProfileOpen(false)}
         />
       )}

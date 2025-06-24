@@ -160,7 +160,7 @@ export default function PatientDetailPage() {
 
   return (
     <AuthGuard requiredPermission="read_patient">
-      <div className="min-h-screen bg-gradient-to-br from-system-gray-50 via-white to-apple-blue/5">
+      <div className="min-h-screen pt-16 bg-gradient-to-br from-system-gray-50 via-white to-apple-blue/5">
         {/* Header */}
         <div className="bg-white/80 backdrop-blur-lg border-b border-system-gray-200">
           <div className="max-w-6xl mx-auto px-6 py-6">
@@ -184,7 +184,7 @@ export default function PatientDetailPage() {
                   </div>
                   <div>
                     <h1 className="text-3xl font-bold text-system-gray-900">
-                      {patient.full_name}
+                      {patient.full_name || `${patient.family_name || ''} ${patient.given_name || ''}`.trim()}
                     </h1>
                     <div className="flex items-center gap-4 text-system-gray-600">
                       <span className="text-sm">
@@ -262,14 +262,14 @@ export default function PatientDetailPage() {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={patient.full_name}
+                            value={patient.full_name || `${patient.family_name || ''} ${patient.given_name || ''}`.trim()}
                             onChange={(e) => handleInputChange('full_name', e.target.value)}
                             className="w-full px-4 py-3 glass-input rounded-xl text-system-gray-900
                                      focus:ring-2 focus:ring-apple-blue/20 focus:border-apple-blue/30 transition-all duration-200"
                           />
                         ) : (
                           <p className="text-lg font-medium text-system-gray-900">
-                            {patient.full_name}
+                            {patient.full_name || `${patient.family_name || ''} ${patient.given_name || ''}`.trim()}
                           </p>
                         )}
                       </div>
@@ -281,14 +281,14 @@ export default function PatientDetailPage() {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={patient.full_name_kana || ''}
+                            value={patient.full_name_kana || `${patient.family_name_kana || ''} ${patient.given_name_kana || ''}`.trim()}
                             onChange={(e) => handleInputChange('full_name_kana', e.target.value)}
                             className="w-full px-4 py-3 glass-input rounded-xl text-system-gray-900
                                      focus:ring-2 focus:ring-apple-blue/20 focus:border-apple-blue/30 transition-all duration-200"
                           />
                         ) : (
                           <p className="text-lg text-system-gray-600">
-                            {patient.full_name_kana || '-'}
+                            {patient.full_name_kana || `${patient.family_name_kana || ''} ${patient.given_name_kana || ''}`.trim() || '-'}
                           </p>
                         )}
                       </div>

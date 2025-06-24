@@ -1,12 +1,12 @@
 import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { motion } from 'framer-motion';
+// import { motion } from 'framer-motion'; // Removed for performance
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
   // Base styles - iPhone-inspired clean design
-  'inline-flex items-center justify-center rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] select-none',
+  'inline-flex items-center justify-center rounded-xl text-sm font-medium transition-colors duration-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none',
   {
     variants: {
       variant: {
@@ -89,37 +89,26 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : 'button';
     
     return (
-      <motion.div
-        whileHover={{ scale: disabled || loading ? 1 : 1.02 }}
-        whileTap={{ scale: disabled || loading ? 1 : 0.98 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        disabled={disabled || loading}
+        {...props}
       >
-        <Comp
-          className={cn(buttonVariants({ variant, size, className }))}
-          ref={ref}
-          disabled={disabled || loading}
-          {...props}
-        >
-          {loading && (
-            <motion.div
-              className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
-          )}
-          
-          {leftIcon && !loading && (
-            <span className="mr-2 flex items-center">{leftIcon}</span>
-          )}
-          
-          <span className="flex items-center">{children}</span>
-          
-          {rightIcon && (
-            <span className="ml-2 flex items-center">{rightIcon}</span>
-          )}
-        </Comp>
-      </motion.div>
+        {loading && (
+          <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        )}
+        
+        {leftIcon && !loading && (
+          <span className="mr-2 flex items-center">{leftIcon}</span>
+        )}
+        
+        <span className="flex items-center">{children}</span>
+        
+        {rightIcon && (
+          <span className="ml-2 flex items-center">{rightIcon}</span>
+        )}
+      </Comp>
     );
   }
 );

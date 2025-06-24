@@ -37,6 +37,7 @@ export const AuditAction = {
   PRESCRIPTION_UPDATE: 'prescription_update',
   PRESCRIPTION_DELETE: 'prescription_delete',
   PRESCRIPTION_PRINT: 'prescription_print',
+  PRESCRIPTION_REVIEW: 'prescription_review',
   
   // カルテ関連
   RECORD_VIEW: 'record_view',
@@ -76,7 +77,8 @@ export const ResourceType = {
   RECORD: 'record',
   APPOINTMENT: 'appointment',
   SETTING: 'setting',
-  SYSTEM: 'system'
+  SYSTEM: 'system',
+  AUDIT_LOG: 'audit_log'
 } as const;
 
 export type ResourceType = typeof ResourceType[keyof typeof ResourceType];
@@ -104,6 +106,7 @@ export interface AuditLogCreate {
 // 監査ログ検索フィルター
 export interface AuditLogFilter {
   user_id?: number;
+  user_name?: string;
   action?: AuditAction;
   resource_type?: ResourceType;
   severity?: AuditSeverity;

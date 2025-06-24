@@ -69,22 +69,22 @@ export function usePermissions() {
       roleList.every(role => roles.includes(role)),
     
     // Medical staff checks
-    isMedicalStaff: () => roles.some(role => [
-      UserRole.DOCTOR,
-      UserRole.NURSE,
-      UserRole.PHARMACIST,
-      UserRole.TECHNICIAN
-    ].includes(role as UserRole)),
+    isMedicalStaff: () => roles.some((role: UserRole) => [
+      'doctor',
+      'nurse', 
+      'pharmacist',
+      'technician'
+    ].includes(role)),
     
-    isAdminStaff: () => roles.some(role => [
-      UserRole.SUPER_ADMIN,
-      UserRole.ADMIN
-    ].includes(role as UserRole)),
+    isAdminStaff: () => roles.some((role: UserRole) => [
+      'super_admin',
+      'admin'
+    ].includes(role)),
     
-    isDoctorOrNurse: () => roles.some(role => [
-      UserRole.DOCTOR,
-      UserRole.NURSE
-    ].includes(role as UserRole)),
+    isDoctorOrNurse: () => roles.some((role: UserRole) => [
+      'doctor',
+      'nurse'
+    ].includes(role)),
     
     // Patient data access checks
     canAccessPatientData: () => permissions.includes(Permission.READ_PATIENT),

@@ -144,6 +144,48 @@ async def get_patients():
     }
 
 
+@app.post("/api/patients")
+async def create_patient(patient_data: dict):
+    """Mock create patient endpoint"""
+    # Generate new patient ID
+    new_id = 3
+    patient_number = f"P{new_id:07d}"
+    
+    # Create patient response
+    new_patient = {
+        "id": new_id,
+        "patient_number": patient_number,
+        "family_name": patient_data.get("family_name", ""),
+        "given_name": patient_data.get("given_name", ""),
+        "birth_date": patient_data.get("birth_date", ""),
+        "gender": patient_data.get("gender", ""),
+        "blood_type": patient_data.get("blood_type", ""),
+        "phone_number": patient_data.get("phone_number", ""),
+        "address": patient_data.get("address", ""),
+        "created_at": "2025-06-22T20:30:00Z"
+    }
+    
+    return new_patient
+
+
+@app.post("/api/audit")
+async def create_audit_log(audit_data: dict):
+    """Mock audit log endpoint - logs to console in development"""
+    print(f"📋 Audit Log: {audit_data}")
+    return {"status": "logged", "id": "audit_123"}
+
+
+@app.get("/api/audit")
+async def get_audit_logs():
+    """Mock audit logs endpoint"""
+    return {
+        "logs": [],
+        "total": 0,
+        "page": 1,
+        "per_page": 10
+    }
+
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     """Custom HTTP exception handler"""

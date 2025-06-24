@@ -3,7 +3,6 @@
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { Block } from "@blocknote/core";
 import { 
   Plus, 
   Search, 
@@ -18,27 +17,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { AuthGuard } from '@/components/auth/AuthGuard';
-import { MedicalBlockEditor } from '@/components/medical/MedicalBlockEditor';
+import { SimpleSOAPEditor } from '@/components/medical/SimpleSOAPEditor';
 import { animations } from '@/lib/utils';
-
-interface Patient {
-  id: string;
-  full_name: string;
-  patient_number: string;
-  age: number;
-  gender: string;
-  birth_date: string;
-  phone_number?: string;
-  emergency_contact_name?: string;
-  allergies?: string;
-  medical_history?: string;
-}
+import { Patient } from '@/types/patient';
 
 interface SOAPData {
   subjective: string;
   objective: string;
   assessment: string;
   plan: string;
+  private_notes?: string;
 }
 
 interface MedicalRecordCreate {
@@ -50,7 +38,6 @@ interface MedicalRecordCreate {
   objective: string;
   assessment: string;
   plan: string;
-  blocks_data: Block[];
   severity: 'mild' | 'moderate' | 'severe' | 'critical';
   department?: string;
   attending_physician?: string;
@@ -82,36 +69,57 @@ export default function NewRecordPage() {
   const mockPatients: Patient[] = [
     {
       id: '1',
-      full_name: '山田太郎',
+      family_name: '山田',
+      given_name: '太郎',
       patient_number: 'P00123',
       age: 45,
-      gender: '男性',
+      gender: 'male',
       birth_date: '1978-05-15',
       phone_number: '090-1234-5678',
       allergies: 'ペニシリンアレルギー',
-      medical_history: '高血圧、糖尿病'
+      medical_history: '高血圧、糖尿病',
+      full_name: '山田太郎',
+      full_name_kana: 'ヤマダタロウ',
+      full_address: '東京都',
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+      is_active: true
     },
     {
-      id: '2', 
-      full_name: '佐藤花子',
+      id: '2',
+      family_name: '佐藤',
+      given_name: '花子',
       patient_number: 'P00124',
       age: 32,
-      gender: '女性',
+      gender: 'female',
       birth_date: '1991-08-22',
       phone_number: '080-9876-5432',
       allergies: 'なし',
-      medical_history: '特記事項なし'
+      medical_history: '特記事項なし',
+      full_name: '佐藤花子',
+      full_name_kana: 'サトウハナコ',
+      full_address: '東京都',
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+      is_active: true
     },
     {
       id: '3',
-      full_name: '鈴木一郎',
+      family_name: '鈴木',
+      given_name: '一郎',
       patient_number: 'P00125', 
       age: 67,
-      gender: '男性',
+      gender: 'male',
       birth_date: '1956-12-03',
       phone_number: '070-5555-1234',
       allergies: '造影剤アレルギー',
-      medical_history: '心房細動、慢性腎臓病'
+      medical_history: '心房細動、慢性腎臓病',
+      full_name: '鈴木一郎',
+      full_name_kana: 'スズキイチロウ',
+      full_address: '東京都',
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+      is_active: true
     }
   ];
 
@@ -127,11 +135,12 @@ export default function NewRecordPage() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      const results = mockPatients.filter(patient =>
-        patient.full_name.includes(query) ||
-        patient.patient_number.includes(query) ||
-        patient.phone_number?.includes(query)
-      );
+      const results = mockPatients.filter(patient => {
+        const fullName = patient.full_name || `${patient.family_name || ''} ${patient.given_name || ''}`.trim();
+        return fullName.includes(query) ||
+               patient.patient_number.includes(query) ||
+               patient.phone_number?.includes(query);
+      });
       
       setSearchResults(results);
     } catch (err) {
@@ -158,7 +167,7 @@ export default function NewRecordPage() {
   };
 
   // Handle medical record save
-  const handleSave = useCallback(async (blocks: Block[], soapData: SOAPData) => {
+  const handleSave = useCallback(async (soapData: SOAPData) => {
     if (!selectedPatient) {
       setError('患者を選択してください');
       return;
@@ -181,11 +190,10 @@ export default function NewRecordPage() {
         objective: soapData.objective,
         assessment: soapData.assessment,
         plan: soapData.plan,
-        blocks_data: blocks,
         severity,
         department,
         attending_physician: attendingPhysician,
-        private_notes: privateNotes,
+        private_notes: soapData.private_notes || privateNotes,
         billing_notes: billingNotes
       };
 
@@ -341,12 +349,12 @@ export default function NewRecordPage() {
                           >
                             <div className="flex items-center gap-4">
                               <div className="w-10 h-10 bg-gradient-to-br from-apple-blue to-apple-purple rounded-full flex items-center justify-center text-white font-medium">
-                                {patient.full_name[0]}
+                                {(patient.full_name || `${patient.family_name || ''} ${patient.given_name || ''}`.trim())[0] || 'P'}
                               </div>
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-1">
                                   <span className="font-medium text-system-gray-900">
-                                    {patient.full_name}
+                                    {patient.full_name || `${patient.family_name || ''} ${patient.given_name || ''}`.trim()}
                                   </span>
                                   <span className="text-sm text-system-gray-600">
                                     ({patient.patient_number})
@@ -390,11 +398,11 @@ export default function NewRecordPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className="w-16 h-16 bg-gradient-to-br from-apple-blue to-apple-purple rounded-full flex items-center justify-center text-white font-bold text-xl">
-                          {selectedPatient.full_name[0]}
+                          {(selectedPatient.full_name || `${selectedPatient.family_name || ''} ${selectedPatient.given_name || ''}`.trim())[0] || 'P'}
                         </div>
                         <div>
                           <h3 className="text-xl font-bold text-system-gray-900">
-                            {selectedPatient.full_name}
+                            {selectedPatient.full_name || `${selectedPatient.family_name || ''} ${selectedPatient.given_name || ''}`.trim()}
                           </h3>
                           <div className="flex items-center gap-4 text-sm text-system-gray-600 mt-1">
                             <span>患者番号: {selectedPatient.patient_number}</span>
@@ -495,18 +503,14 @@ export default function NewRecordPage() {
                 </Card>
               </motion.div>
 
-              {/* BlockNote Editor */}
-              <motion.div
-                {...animations.slideInUp}
-                transition={{ delay: 0.2 }}
-                className="mb-8"
-              >
-                <MedicalBlockEditor
+              {/* SOAP Editor */}
+              <div className="mb-8">
+                <SimpleSOAPEditor
                   patient={selectedPatient}
                   onSave={handleSave}
                   className="w-full"
                 />
-              </motion.div>
+              </div>
 
               {/* Additional Notes */}
               <motion.div

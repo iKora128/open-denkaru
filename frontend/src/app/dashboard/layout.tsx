@@ -10,8 +10,10 @@ export default function DashboardLayout({
       <Navigation currentPage="dashboard" />
       
       {/* Main Content with proper spacing for fixed navigation */}
-      <main className="pt-16">
-        {children}
+      <main className="pt-20 min-h-screen">
+        <div className="relative">
+          {children}
+        </div>
       </main>
     </div>
   );

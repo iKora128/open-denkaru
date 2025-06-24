@@ -50,9 +50,10 @@ export default function PatientsPage() {
   // Filter and sort patients
   const filteredPatients = patients
     .filter((patient) => {
-      // Search filter
+      // Search filter - safely handle full_name
+      const fullName = patient.full_name || `${patient.family_name || ''} ${patient.given_name || ''}`.trim();
       const searchMatch = 
-        patient.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         patient.patient_number.includes(searchQuery) ||
         (patient.full_name_kana && patient.full_name_kana.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -66,7 +67,9 @@ export default function PatientsPage() {
       
       switch (sortBy) {
         case 'name':
-          comparison = a.full_name.localeCompare(b.full_name, 'ja');
+          const aFullName = a.full_name || `${a.family_name || ''} ${a.given_name || ''}`.trim();
+          const bFullName = b.full_name || `${b.family_name || ''} ${b.given_name || ''}`.trim();
+          comparison = aFullName.localeCompare(bFullName, 'ja');
           break;
         case 'age':
           const ageA = a.birth_date ? new Date().getFullYear() - new Date(a.birth_date).getFullYear() : 0;
@@ -95,9 +98,9 @@ export default function PatientsPage() {
 
   return (
     <AuthGuard requiredPermission="read_patient">
-      <div className="min-h-screen bg-gradient-to-br from-system-gray-50 via-white to-apple-blue/5">
+      <div className="min-h-screen pt-16 bg-gradient-to-br from-system-gray-50 via-white to-apple-blue/5">
         {/* Header */}
-        <div className="bg-white/80 backdrop-blur-lg border-b border-system-gray-200 sticky top-0 z-10">
+        <div className="bg-white/80 backdrop-blur-lg border-b border-system-gray-200 sticky top-16 z-10">
           <div className="max-w-7xl mx-auto px-6 py-6">
             <motion.div 
               className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6"

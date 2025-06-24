@@ -57,11 +57,11 @@ export function PatientCard({ patient, onClick }: PatientCardProps) {
                 </div>
                 <div>
                   <h3 className="font-bold text-xl text-system-gray-900 dark:text-white group-hover:text-apple-blue transition-colors">
-                    {patient.full_name}
+                    {patient.full_name || `${patient.family_name || ''} ${patient.given_name || ''}`.trim()}
                   </h3>
-                  {patient.full_name_kana && (
+                  {(patient.full_name_kana || (patient.family_name_kana && patient.given_name_kana)) && (
                     <p className="text-sm text-system-gray-600 dark:text-system-gray-400 mt-0.5">
-                      {patient.full_name_kana}
+                      {patient.full_name_kana || `${patient.family_name_kana || ''} ${patient.given_name_kana || ''}`.trim()}
                     </p>
                   )}
                   <div className="flex items-center gap-2 mt-1">

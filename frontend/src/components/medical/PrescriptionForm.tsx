@@ -171,7 +171,7 @@ export function PrescriptionForm({
             新規処方箋作成
           </CardTitle>
           <div className="text-sm text-gray-600">
-            患者: {patient.full_name} ({patient.patient_number})
+            患者: {patient.full_name || `${patient.family_name || ''} ${patient.given_name || ''}`.trim()} ({patient.patient_number})
           </div>
         </CardHeader>
 

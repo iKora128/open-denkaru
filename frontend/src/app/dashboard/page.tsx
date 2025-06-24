@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -25,44 +25,21 @@ import { Card, CardContent, CardHeader, CardTitle, VitalCard } from '@/component
 import { PatientCard } from '@/components/medical/PatientCard';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { animations } from '@/lib/utils';
-import { medicalApi, devUtils } from '@/lib/api';
+import { devUtils } from '@/lib/api';
 import type { Patient } from '@/types/patient';
 import { useRouter } from 'next/navigation';
+import { usePatients, usePatientStats } from '@/hooks/usePatients';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Use React Query hooks for data fetching
+  const { data: patients = [], isLoading } = usePatients();
 
-  // Fetch patients from API using proper API client
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        // Log API configuration in development
-        devUtils.logConfig();
-        
-        // Test API connection first
-        const isConnected = await devUtils.testConnection();
-        if (!isConnected) {
-          console.warn('⚠️ API connection failed, using demo data');
-          setPatients([]);
-          return;
-        }
-
-        // Fetch patients data
-        const data = await medicalApi.patients.list();
-        setPatients(data || []);
-      } catch (error) {
-        console.error('Failed to fetch patients:', error);
-        // In case of error, set empty array instead of crashing
-        setPatients([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPatients();
+  // Development utilities
+  React.useEffect(() => {
+    devUtils.logConfig();
   }, []);
 
   // Navigation functions
@@ -96,15 +73,17 @@ export default function DashboardPage() {
   };
 
   // Filter patients based on search query
-  const filteredPatients = patients.filter((patient) => {
-    return patient.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filteredPatients = Array.isArray(patients) ? patients.filter((patient) => {
+    const fullName = `${patient.family_name} ${patient.given_name}`;
+    return fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
            patient.patient_number.includes(searchQuery) ||
-           (patient.full_name_kana && patient.full_name_kana.toLowerCase().includes(searchQuery.toLowerCase()));
-  });
+           (patient.family_name && patient.family_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+           (patient.given_name && patient.given_name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }) : [];
 
   return (
     <AuthGuard>
-      <div className="min-h-screen">
+      <div className="min-h-screen pt-16">
       {/* Enhanced Header Section */}
       <div className="bg-gradient-to-r from-apple-blue/5 via-white to-apple-purple/5 border-b border-system-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-8">

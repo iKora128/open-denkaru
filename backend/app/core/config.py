@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     TIMEZONE: str = "Asia/Tokyo"
     
     # File storage
-    STORAGE_PATH: str = "/app/storage"
+    STORAGE_PATH: str = Field(default="./storage")
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
     
     # External services

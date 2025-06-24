@@ -184,6 +184,42 @@ input, textarea, select {
     @apply absolute bottom-0 left-0 right-0 h-0.5 bg-apple-blue rounded-full;
   }
   
+  /* Navigation Spacing Fix */
+  .nav-fixed-spacing {
+    padding-top: 80px; /* 20 * 4px = 80px (pt-20) */
+  }
+  
+  /* Prevent header overlap */
+  .header-safe-area {
+    margin-top: 80px;
+  }
+  
+  /* Enhanced backdrop blur for navigation */
+  .nav-glass {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Ensure no content appears behind navigation */
+  .main-content {
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Prevent scroll behind nav on mobile */
+  body.nav-open {
+    overflow: hidden;
+  }
+  
+  /* Safe area for devices with notches */
+  @supports (padding-top: env(safe-area-inset-top)) {
+    .nav-fixed-spacing {
+      padding-top: calc(80px + env(safe-area-inset-top));
+    }
+  }
+  
   /* Card Layouts */
   .card-grid {
     @apply grid gap-6;
@@ -314,6 +350,11 @@ input, textarea, select {
   /* Mobile navigation */
   .nav-link {
     @apply px-4 py-3 text-base;
+  }
+  
+  /* Mobile navigation spacing */
+  .nav-fixed-spacing {
+    padding-top: 72px; /* Reduced padding for mobile */
   }
   
   /* Mobile typography */
